@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Zweef</title>
+  <meta name="description" content="Een trage vlucht door muziek.">
+  <meta name="theme-color" content="#07080d">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Zweef">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <main id="start" class="scherm actief" aria-labelledby="titel">
+    <div class="start-inhoud">
+      <h1 id="titel">Zweef</h1>
+      <p class="ondertitel">Een trage vlucht door muziek</p>
+      <p class="advies">Gebruik een koptelefoon</p>
+      <button id="begin" class="knop" type="button">Begin</button>
+      <label class="schakelaar">
+        <input type="checkbox" id="minder-beweging">
+        <span class="schuif" aria-hidden="true"></span>
+        <span>Minder beweging</span>
+      </label>
+    </div>
+  </main>
+
+  <section id="keuze" class="scherm" aria-labelledby="keuze-titel" hidden>
+    <div class="keuze-inhoud">
+      <h2 id="keuze-titel">Kies een wereld</h2>
+      <div class="kaarten">
+        <button class="kaart" type="button" data-wereld="ruimte">
+          <span class="beeld beeld-ruimte" aria-hidden="true"><i class="planeet"></i></span>
+          <span class="kaart-naam">Ruimte</span>
+          <span class="kaart-tekst">Sterren en stilte</span>
+        </button>
+        <button class="kaart" type="button" data-wereld="canyon">
+          <span class="beeld beeld-canyon" aria-hidden="true"><i class="wand wand-l"></i><i class="wand wand-r"></i><i class="gloed"></i></span>
+          <span class="kaart-naam">Canyon</span>
+          <span class="kaart-tekst">Rood gesteente, warm licht</span>
+        </button>
+        <button class="kaart" type="button" data-wereld="wolken">
+          <span class="beeld beeld-wolken" aria-hidden="true"><i class="zon"></i><i class="bank bank-1"></i><i class="bank bank-2"></i></span>
+          <span class="kaart-naam">Wolken</span>
+          <span class="kaart-tekst">Een gouden zee van wolken</span>
+        </button>
+      </div>
+      <p class="melding" id="melding" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section id="vlucht" class="scherm" aria-label="Vlucht" hidden>
+    <canvas id="doek"></canvas>
+    <button id="terug" class="terug" type="button" aria-label="Terug naar de keuze">&#8592;</button>
+
+  </section>
+
+  <div id="zwart" aria-hidden="true"></div>
+  <p id="laden" class="laden" role="status">Even geduld&hellip;</p>
+
+  <script type="module" src="scripts/app.js"></script>
+</body>
+</html>
