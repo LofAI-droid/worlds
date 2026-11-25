@@ -90,7 +90,7 @@ kbd, .duim {
 }
 .knop:hover:not(:disabled) { transform: translateY(-1px); }
 .knop:disabled { opacity: 0.55; cursor: progress; }
-.knop:focus-visible, .pauze:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.knop:focus-visible, .pauze:focus-visible, .zicht:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
 .voortgang { min-height: 1.2em; margin: 12px 0 0; font-size: 0.85rem; color: var(--zacht); }
 
@@ -107,6 +107,22 @@ kbd, .duim {
   font-size: 0.9rem;
   z-index: 5;
 }
+
+.zicht {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: calc(max(12px, env(safe-area-inset-left)) + 54px);
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 22px;
+  border: 0;
+  background: var(--paneel);
+  color: var(--tekst);
+  font: inherit;
+  font-size: 0.85rem;
+  z-index: 5;
+}
+.zicht[hidden], .pauze[hidden] { display: none; }
 
 .kaart {
   position: fixed;

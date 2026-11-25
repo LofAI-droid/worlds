@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Ministad</title>
-  <meta name="description" content="Wandel door een kleine stad, gebouwd in Blender.">
+  <meta name="description" content="Loop als een mannetje rond in een kleine, levendige stad, gebouwd in Blender.">
   <meta name="theme-color" content="#07080d">
   <meta name="color-scheme" content="dark">
   <link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
@@ -24,18 +24,19 @@
   <main id="intro" class="laag" aria-labelledby="titel">
     <div class="paneel">
       <h1 id="titel">Ministad</h1>
-      <p class="ondertitel">Wandel door een kleine stad, gebouwd in Blender</p>
+      <p class="ondertitel">Loop rond in een kleine stad, gebouwd in Blender</p>
       <ul class="uitleg toetsen">
         <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span>wandelen (ook pijltjes, of <kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> op azerty)</span></li>
-        <li><kbd>muis</kbd> <span>rondkijken</span></li>
+        <li><kbd>muis</kbd> <span>rondkijken, <kbd>scroll</kbd> zoomen</span></li>
         <li><kbd>Shift</kbd> <span>lopen</span></li>
         <li><kbd>Spatie</kbd> <span>springen</span></li>
+        <li><kbd>V</kbd> <span>door zijn ogen of achter het mannetje</span></li>
         <li><kbd>M</kbd> <span>kaart aan/uit</span></li>
         <li><kbd>Esc</kbd> <span>pauze</span></li>
       </ul>
       <ul class="uitleg aanraak">
         <li><span class="duim">links</span> <span>sleep om te wandelen</span></li>
-        <li><span class="duim">rechts</span> <span>sleep om rond te kijken</span></li>
+        <li><span class="duim">rechts</span> <span>sleep om rond te kijken, dubbeltik om te springen</span></li>
       </ul>
       <button id="wandel" class="knop" type="button" disabled>Laden&hellip;</button>
       <p id="voortgang" class="voortgang" role="status" aria-live="polite"></p>
@@ -43,6 +44,7 @@
   </main>
 
   <button id="pauze" class="pauze" type="button" aria-label="Pauze" hidden>&#10074;&#10074;</button>
+  <button id="zicht" class="zicht" type="button" hidden>Door zijn ogen</button>
   <canvas id="kaart" class="kaart" width="180" height="180" aria-label="Kaart van de stad" hidden></canvas>
   <div id="stok" class="stok" aria-hidden="true"><div class="knop-stok"></div></div>
   <div id="vizier" class="vizier" aria-hidden="true" hidden></div>

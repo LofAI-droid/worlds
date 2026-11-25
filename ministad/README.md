@@ -1,47 +1,65 @@
 # Ministad
 
-Een kleine stad, gebouwd met Blender, waarin je in de browser kan rondwandelen.
+Een kleine, levendige stad, gebouwd met Blender. In de browser loop je er rond als een mannetje.
 
 ![De stad van bovenaf](blender/voorbeeld-lucht.png)
-![Op straat](blender/voorbeeld-straat.png)
+![Een winkelstraat](blender/voorbeeld-winkels.png)
+![De bewoners](blender/voorbeeld-figuren.png)
 
-## Wat staat er in de stad?
+## Wat is er te zien?
 
-- 5 × 5 bouwblokken met rijhuizen in verschillende kleuren, hoogtes en daken
-  (zadeldaken en platte daken), voordeuren, luifels en binnenkoeren met een boom
-- een **park** in het midden met een fontein, paden, bomen en banken
-- een **kerkplein** met een kerk, een klokkentoren en een standbeeld
-- een **zakenwijk** met twee glazen torens
-- straten met middenlijnen, zebrapaden, straatlantaarns, laanbomen en geparkeerde auto's
-- een bosrand rondom de stad
+**De stad** (`blender/bouw_stad.py`)
+- 5 × 5 bouwblokken met rijhuizen in allerlei kleuren en hoogtes, zadeldaken met schoorstenen,
+  platte daken, balkons met plantjes, voordeuren en bloempotten
+- winkels met een etalage waar je in kan kijken: bakker, slager, boekhandel, apotheek (met groen kruis),
+  kapper (met draaipaal), bloemen, groenten en fruit, speelgoed, mode, optiek, fietsen, chocolatier...
+- cafés, bars en restaurants met terrassen, parasols, krijtborden en glazen op tafel
+- zonneschermen, uithangborden met de naam van de zaak (echte tekst uit Blender)
+- een park met fontein, speeltuin (schommel, glijbaan, wipwap) en een ijskar
+- een kerkplein met kerk, klokkentoren, marktkramen, een reclamezuil en paaltjes
+- een zakenwijk met twee glazen torens, een koffiekiosk en een fietsenstalling
+- straten met zebrapaden, putdeksels, lantaarns met straatnaambordjes, bushaltes, prullenbakken,
+  fietsenrekken, brievenbussen, brandkranen, bloembakken, parkeerborden en laanbomen
 
-## Rondwandelen
+**De bewoners** (`blender/bouw_figuren.py`, tot leven gewekt door `leven.js`)
+- voetgangers die over de stoep wandelen, bij het zebrapad kijken voor ze oversteken,
+  even voor een etalage blijven staan, of gewoon joggen
+- mensen met hun hond aan de leiband, kinderen en een hond die in het park rondrennen
+- mensen op de terrassen, op bankjes en in het bushokje, groepjes die staan te praten
+- katten op de stoep die je nakijken, duiven op het plein die opvliegen als je te dichtbij komt
+- auto's, taxi's, fietsers, bakfietsen (soms met een kind in de bak), scooters en twee stadsbussen
+  (lijn 12) die stoppen aan de haltes. Iedereen rijdt rechts, geeft voorrang op de kruispunten
+  en stopt voor voetgangers. Het is levendig, maar niet druk.
 
-Open `ministad/index.html` via een webserver (de pagina laadt `ministad.glb`, dus
+## Rondlopen
+
+Open `ministad/index.html` via een webserver (de pagina laadt de `.glb`-bestanden, dus
 dubbelklikken op het bestand werkt niet). Vanuit de hoofdmap van de repository:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-en ga dan naar <http://localhost:8000/ministad/>.
+en ga dan naar <http://localhost:8000/ministad/>. Of zet GitHub Pages aan voor deze branch.
 
 | Computer | Telefoon of tablet |
 | --- | --- |
-| `W A S D` of pijltjes (azerty: `Z Q S D`): wandelen | links slepen: wandelen |
-| muis: rondkijken | rechts slepen: rondkijken |
-| `Shift`: lopen, `Spatie`: springen | rechts dubbeltikken: springen |
+| `W A S D` of pijltjes (azerty: `Z Q S D`): lopen | links slepen: lopen |
+| muis: rondkijken, scroll: zoomen | rechts slepen: rondkijken |
+| `Shift`: rennen, `Spatie`: springen | rechts dubbeltikken: springen |
+| `V`: door zijn ogen of achter het mannetje | knop bovenaan: door zijn ogen |
 | `M`: kaart aan/uit, `Esc`: pauze | knop linksboven: pauze |
 
-Je botst tegen gebouwen, bomen, lantaarns, banken en auto's, en stapt vanzelf de stoep op.
+Je botst tegen gebouwen, bomen, lantaarns, auto's en mensen. De camera blijft uit de muren
+en bladeren vlak voor de camera worden doorzichtig.
 
-## De stad opnieuw bouwen in Blender
+## De stad en de bewoners opnieuw bouwen in Blender
 
-Alles komt uit één script: [`blender/bouw_stad.py`](blender/bouw_stad.py).
-Voer het uit vanuit de map `ministad/`:
+Voer de scripts uit vanuit de map `ministad/`:
 
 ```bash
 blender --background --python blender/bouw_stad.py
+blender --background --python blender/bouw_figuren.py
 ```
 
 Of zonder Blender-programma, met de `bpy`-module (Python 3.11):
@@ -49,26 +67,31 @@ Of zonder Blender-programma, met de `bpy`-module (Python 3.11):
 ```bash
 python3.11 -m pip install bpy
 python3.11 blender/bouw_stad.py
+python3.11 blender/bouw_figuren.py
 ```
 
-Voeg `-- --render` toe om ook de voorbeeldbeelden te renderen (Cycles, ongeveer 1,5 minuut op de CPU).
-
-Het script maakt:
+Voeg `-- --render` toe om ook de voorbeeldbeelden te renderen (Cycles op de CPU, een paar minuten),
+of bv. `-- --render winkels` voor één beeld.
 
 | Bestand | Inhoud |
 | --- | --- |
-| `blender/ministad.blend` | het Blender-bestand, met een collectie per wijk, een zon, lucht en camera |
-| `blender/texturen/*.png` | gevels, dakpannen, asfalt, stoeptegels, gras en steen, met numpy getekend |
-| `ministad.glb` | de stad voor de wandelpagina |
-| `botsing.json` | de obstakels (rechthoeken), het startpunt en het stratenplan voor de kaart |
+| `blender/gereedschap.py` | gedeelde hulpjes: texturen tekenen met numpy, materialen, dozen, daken, wielen, tekst |
+| `blender/ministad.blend` | de stad, met een collectie per wijk, een zon, lucht en camera |
+| `blender/figuren.blend` | alle figuren naast elkaar, elk met draaipunten in de gewrichten |
+| `ministad.glb` | de stad voor de browser (met Draco-compressie) |
+| `figuren.glb` | mens, hond, kat, duif, fiets, bakfiets, scooter, auto, taxi en bus |
+| `botsing.json` | obstakels, zitplaatsen, kattenplekjes, de busroute en haltes, het park en het plein |
 
-Wil je een andere stad? Verander `ZAAD` bovenaan het script, of speel met `BLOKKEN`,
-`BLOK`, `WEG` en de bijzondere blokken `PARK`, `PLEIN` en `ZAKEN`.
+Wil je een andere stad? Verander `ZAAD` bovenaan `bouw_stad.py`, of speel met `BLOKKEN`,
+`BLOK`, `WEG`, de lijst `WINKELS` en de bijzondere blokken `PARK`, `PLEIN` en `ZAKEN`.
 
-## Hoe de wandelpagina werkt
+## Hoe het werkt
 
-- `wandel.js` laadt de stad met three.js en voegt alle onderdelen met hetzelfde materiaal
-  samen, zodat de ~730 Blender-objecten in een veertigtal tekenopdrachten passen.
-- De zon volgt de wandelaar, zodat de schaduwen dichtbij scherp blijven.
-- Botsen gebeurt met een cirkel (de wandelaar) tegen de rechthoeken uit `botsing.json`;
-  je glijdt langs muren in plaats van vast te lopen.
+- `wandel.js` laadt alles, voegt de ~900 stadsobjecten per materiaal samen (een vijftigtal
+  tekenopdrachten), en bestuurt het mannetje en de camera.
+- `figuren.js` kloont de figuren uit `figuren.glb`, geeft elke persoon andere kleuren
+  (huid, kleren, haar, pet, helm, rugzak) en zet ze in een houding: stappen, rennen, staan,
+  praten, zitten, fietsen.
+- `leven.js` is de stad zelf: een wegennet waarop elk kruispunt één voertuig tegelijk binnenlaat,
+  voertuigen die afstand houden en alleen een kruispunt oprijden als er erachter plaats is,
+  voetgangers die over de stoepen van blok naar blok lopen, en de dieren.
