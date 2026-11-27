@@ -95,7 +95,8 @@ zitplaatsen = []       # {x, z, y, h} in three.js-coördinaten
 katplekken = []
 bezet = []             # stukken stoeprand die al gebruikt zijn: (x0, y0, x1, y1)
 winkel_rij = []
-gebouwde_winkels = []  # (naam, soort, punt midden op de gevel, richting naar buiten, langs de gevel)
+gebouwde_winkels = []
+winkels_json = []      # winkels waar je binnen kan, voor het spel  # (naam, soort, punt midden op de gevel, richting naar buiten, langs de gevel)
 
 
 def weg_as(i):
@@ -172,6 +173,10 @@ def maak_materialen():
     for naam, kleur in WAREN.items():
         materiaal(naam, kleur, 0.6)
     materiaal('glas', '#a9c4d4', 0.05, alfa=0.22)
+    materiaal('muur_winkel', '#efe6d6', 0.9)
+    materiaal('plafond', '#f4f1ea', 0.9)
+    materiaal('vloer_winkel', '#d9cfbf', 0.7, tex_vlak('vloer_winkel', '#d9cfbf', 0.05, 8, 51, tegels=4, voeg=0.85))
+    materiaal('vloer_horeca', '#8a6440', 0.7, tex_vlak('vloer_horeca', '#8a6440', 0.12, 16, 52, tegels=2, voeg=0.8))
     materiaal('plint', '#3b3f45', 0.7)
     materiaal('kozijn', '#2a2d31', 0.5)
     materiaal('markering', '#f1f1ea', 0.7)
@@ -463,42 +468,161 @@ def etalage(b, g, u0, u1, z, soort):
             potplant(b, x, y, z, 1.0)
 
 
-def winkelpui(b, g, w, z0, gevel, winkel, hoog):
-    """De benedenverdieping als winkel: inspringende etalage, uithangbord, zonnescherm, terras."""
+def w3(p):
+    """Blender-punt -> [x, z] in three.js."""
+    return [round(p[0], 3), round(-p[1], 3)]
+
+
+def w3r(v):
+    """Blender-richting -> [dx, dz] in three.js."""
+    return [round(v.x, 4), round(-v.y, 4)]
+
+
+def rechthoek(g, u0, v0, u1, v1):
+    a, c = g.p(u0, v0), g.p(u1, v1)
+    return min(a[0], c[0]), min(a[1], c[1]), max(a[0], c[0]), max(a[1], c[1])
+
+
+def gbotser(g, u0, v0, u1, v1, h):
+    x0, y0, x1, y1 = rechthoek(g, u0, v0, u1, v1)
+    botser(x0, y0, x1, y1, h)
+
+
+def rek(b, g, u0, u1, v0, v1, z0, soort):
+    """Een rek tegen de muur met planken vol spulletjes."""
+    g.doos(b, u0, v0, u1, v1, z0, z0 + 0.12, 'hout')
+    for k, hz in enumerate((0.55, 1.0, 1.45, 1.9)):
+        g.doos(b, u0, v0, u1, v1, z0 + hz - 0.03, z0 + hz, 'hout_licht')
+    kleuren = {'groenten': ['waar_rood', 'waar_oranje', 'waar_groen', 'waar_geel'],
+               'bloemen': ['waar_rood', 'waar_roze', 'waar_paars', 'waar_wit', 'waar_geel'],
+               'bakker': ['waar_bruin', 'waar_geel', 'waar_wit'], 'choco': ['waar_donker', 'waar_bruin', 'waar_roze'],
+               'slager': ['waar_rood', 'waar_roze', 'waar_wit'],
+               'apotheek': ['waar_wit', 'waar_groen', 'waar_blauw']}.get(soort, list(WAREN))
+    langs_u = abs(u1 - u0) > abs(v1 - v0)
+    for hz in (0.12, 0.55, 1.0, 1.45):
+        if langs_u:
+            t, eind = u0 + 0.05, u1 - 0.05
+        else:
+            t, eind = v0 + 0.05, v1 - 0.05
+        while t < eind - 0.1:
+            d = rnd.uniform(0.12, 0.22)
+            h = rnd.uniform(0.15, 0.32)
+            kl = rnd.choice(kleuren)
+            if langs_u:
+                g.doos(b, t, v0 + 0.05, min(t + d, eind), v1 - 0.05, z0 + hz, z0 + hz + h, kl)
+            else:
+                g.doos(b, u0 + 0.05, t, u1 - 0.05, min(t + d, eind), z0 + hz, z0 + hz + h, kl)
+            t += d + rnd.uniform(0.01, 0.06)
+    a, c = g.p(u0, v0), g.p(u1, v1)
+    botser(min(a[0], c[0]), min(a[1], c[1]), max(a[0], c[0]), max(a[1], c[1]), 2.0)
+
+
+def winkelpui(b, g, w, z0, gevel, winkel, hoog, col):
+    """De benedenverdieping als winkel waar je in kan: etalage, deur, toonbank, rekken, uithangbord."""
     naam, soort, bord, letters, luifel, terras = winkel
     gebouwde_winkels.append((naam, soort, Vector(g.p(w / 2, 0, 0)), g.out.copy(), g.r.copy(), w))
     horeca = soort in ('cafe', 'resto', 'frituur', 'ijs')
-    INSPRING = 1.0
-    # binnenkant en zijmuren
-    g.doos(b, 0, -DIEPTE, w, -INSPRING, z0, z0 + 3, gevel, voor='interieur_horeca' if horeca else 'interieur_winkel',
-           raster=VERDIEP)
-    g.doos(b, 0, -INSPRING, 0.3, 0, z0, z0 + 3, 'plint')
-    g.doos(b, w - 0.3, -INSPRING, w, 0, z0, z0 + 3, 'plint')
+    D = DIEPTE
+    hz = z0 + hoog
+    binnen_l = Gevel.kant_van(g.r)              # binnenkant van de linkermuur
+    binnen_r = Gevel.kant_van(-g.r)
+    # muren: links, rechts, achter (binnenkant in winkelkleur)
+    g.doos(b, 0, -D, 0.3, 0, z0, z0 + 3, gevel, raster=VERDIEP, mats={g.kant: 'plint', binnen_l: 'muur_winkel'})
+    g.doos(b, w - 0.3, -D, w, 0, z0, z0 + 3, gevel, raster=VERDIEP, mats={g.kant: 'plint', binnen_r: 'muur_winkel'})
+    g.doos(b, 0.3, -D, w - 0.3, -D + 0.2, z0, z0 + 3, gevel, raster=VERDIEP,
+           mats={g.kant: 'interieur_horeca' if horeca else 'interieur_winkel'})
+    gbotser(g, 0, -D, 0.3, 0, hz)
+    gbotser(g, w - 0.3, -D, w, 0, hz)
+    gbotser(g, 0.3, -D, w - 0.3, -D + 0.2, hz)
+    # vloer en lampen
+    g.doos(b, 0.3, -D + 0.2, w - 0.3, -0.12, z0, z0 + 0.02, 'vloer_horeca' if horeca else 'vloer_winkel', schaal=2)
+    for v in (-2.6, -5.2):
+        g.doos(b, w / 2 - 0.5, v - 0.25, w / 2 + 0.5, v + 0.25, z0 + 2.9, z0 + 2.98, 'lamp')
+    # etalage en glas; rechts de deuropening
+    deur0, deur1 = w - 1.35, w - 0.35
     plank = 0.5 if not horeca else 0.35
-    g.doos(b, 0.3, -INSPRING, w - 0.3, -0.05, z0, z0 + plank, 'plint')
-    # glas met kozijnen en een deur
-    g.doos(b, 0.3, -0.14, w - 0.3, -0.12, z0 + plank, z0 + 2.55, 'glas')
-    g.doos(b, 0.3, -0.16, w - 0.3, -0.1, z0 + 2.5, z0 + 2.6, 'kozijn')
-    deur = w - 1.4
-    g.doos(b, deur - 0.05, -0.16, deur + 0.05, -0.1, z0 + plank, z0 + 2.5, 'kozijn')
-    g.doos(b, deur + 0.85, -0.18, deur + 0.9, -0.12, z0 + 1.0, z0 + 1.3, 'inox')
-    etalage(b, g, 0.4, deur - 0.15, z0 + plank, soort)
+    g.doos(b, 0.3, -1.0, deur0 - 0.1, -0.16, z0, z0 + plank, 'plint', top='hout_licht')
+    g.doos(b, 0.3, -0.15, deur0 - 0.05, -0.12, z0 + plank, z0 + 2.55, 'glas')
+    g.doos(b, deur0 - 0.1, -0.17, deur0, -0.1, z0, z0 + 2.55, 'kozijn')
+    g.doos(b, 0.3, -0.17, w - 0.3, -0.1, z0 + 2.5, z0 + 2.6, 'kozijn')
+    g.doos(b, 0.3, -0.2, w - 0.3, 0, z0 + 2.6, z0 + 3.0, 'plint')
+    gbotser(g, 0.3, -1.0, deur0, 0, 3.0)
+    etalage(b, g, 0.4, deur0 - 0.2, z0 + plank, soort)
+    # de deur zelf: een apart object dat in de browser kan opendraaien
+    idx = len(winkels_json)
+    d = Bouwer(f'Deur_{idx}', col)
+    g.doos(d, deur0 + 0.02, -0.17, deur1, -0.11, z0 + 0.02, z0 + 2.45, 'kozijn')
+    g.doos(d, deur0 + 0.1, -0.18, deur1 - 0.08, -0.1, z0 + 0.12, z0 + 2.37, 'glas')
+    g.doos(d, deur0 + 0.12, -0.22, deur0 + 0.16, -0.06, z0 + 0.95, z0 + 1.35, 'inox')
+    scharnier = g.p(deur1, -0.14, z0)
+    d.klaar(oorsprong=scharnier)
+    # binnen: toonbank, winkelier, rekken of tafeltjes
+    if horeca:
+        t0, t1 = 0.6, w - 0.6
+        g.doos(b, t0, -6.2, t1, -5.6, z0, z0 + 1.1, 'hout', top='hout_licht')
+        tm = (t0 + t1) / 2
+        g.doos(b, tm + 0.3, -6.0, tm + 0.6, -5.75, z0 + 1.1, z0 + 1.45, 'inox')               # koffiemachine
+        gbotser(g, t0, -6.2, t1, -5.6, 1.2)
+        zitjes = []
+        if w >= 5:
+            for v in (-2.4, -3.8):
+                tx, ty, _ = g.p(1.5, v)
+                b.cilinder(tx, ty, z0, 0.05, 0.72, 'metaal', seg=6)
+                b.cilinder(tx, ty, z0 + 0.72, 0.35, 0.04, 'hout_licht', seg=12)
+                gbotser(g, 1.15, v - 0.35, 1.85, v + 0.35, 0.8)
+                for s in (-1, 1):
+                    sx, sy, _ = g.p(1.5, v + s * 0.6)
+                    b.doos(sx - 0.2, sy - 0.2, z0 + 0.42, sx + 0.2, sy + 0.2, z0 + 0.46, 'zwart')
+                    zitjes.append({'x': round(sx, 3), 'z': round(-sy, 3), 'y': round(z0 + 0.46, 3),
+                                   'h': kop(-g.out.x * s, -g.out.y * s)})
+    else:
+        t0, t1 = 0.9, min(w - 1.0, 3.4)
+        g.doos(b, t0, -6.0, t1, -5.4, z0, z0 + 1.0, 'wit', top='hout_licht')
+        tm = (t0 + t1) / 2
+        g.doos(b, tm + 0.2, -5.85, tm + 0.6, -5.55, z0 + 1.0, z0 + 1.22, 'zwart')              # kassa
+        g.doos(b, tm + 0.25, -5.9, tm + 0.55, -5.86, z0 + 1.22, z0 + 1.42, 'kozijn')
+        gbotser(g, t0, -6.0, t1, -5.4, 1.1)
+        rek(b, g, 0.3, 0.8, -4.9, -1.2, z0, soort)
+        if w >= 6:
+            rek(b, g, w - 0.8, w - 0.3, -5.0, -2.1, z0, soort)
+        rek(b, g, t1 + 0.3, w - 0.3, -D + 0.2, -D + 0.7, z0, soort) if w - 0.3 - (t1 + 0.3) > 0.8 else None
+        zitjes = []
+    klanten = []
+    if not horeca:
+        for v in (-2.0, -3.7):
+            kx, ky, _ = g.p(1.2, v)
+            klanten.append({'x': round(kx, 3), 'z': round(-ky, 3), 'h': kop(-g.r.x, -g.r.y)})
+    wx, wy, _ = g.p(tm, -6.75)
+    bx_, by_, _ = g.p(tm, -4.7)
+    lx, ly, _ = g.p(w / 2, -4.0)
+    ix, iy, _ = g.p((deur0 + deur1) / 2, 1.2)
+    dx, dy, _ = g.p((deur0 + deur1) / 2, -0.14)
+    x0, y0, x1, y1 = rechthoek(g, 0.3, -D + 0.2, w - 0.3, -0.12)
+    dr = rechthoek(g, deur0, -0.2, deur1, -0.08)
+    winkels_json.append({
+        'id': idx, 'naam': naam, 'soort': soort,
+        'deur': {'x': round(dx, 3), 'z': round(-dy, 3), 'scharnier': w3(scharnier), 'dicht': w3r(-g.r),
+                 'open': w3r(-g.out), 'vak': [dr[0], -dr[3], dr[2], -dr[1]]},
+        'binnen': [x0, -y1, x1, -y0], 'vloer': round(z0, 3), 'plafond': round(z0 + 3.0, 3),
+        'toonbank': {'x': round(bx_, 3), 'z': round(-by_, 3)},
+        'winkelier': {'x': round(wx, 3), 'z': round(-wy, 3), 'h': kop(g.out.x, g.out.y)},
+        'licht': [round(lx, 3), round(z0 + 2.6, 3), round(-ly, 3)],
+        'ingang': {'x': round(ix, 3), 'z': round(-iy, 3)},
+        'klanten': klanten, 'zitjes': zitjes,
+    })
     # uithangbord met naam
     g.doos(b, 0.15, -0.02, w - 0.15, 0.12, z0 + 2.62, z0 + 3.15, bordmateriaal(bord))
     grootte = min(0.36, (w - 0.6) / (0.6 * len(naam)))
     materiaal('letters_' + letters.lstrip('#'), letters, 0.5)
     b.tekst(naam, g.matrix(w / 2, 0.125, z0 + 2.885), grootte, 'letters_' + letters.lstrip('#'))
     if soort == 'apotheek':
-        # groen kruis dat uitsteekt
-        x, y, _ = g.p(0.2, 0.55)
-        g.doos(b, 0.17, 0.25, 0.23, 0.85, z0 + 3.4, z0 + 3.95, 'waar_groen', mats=None)
+        g.doos(b, 0.17, 0.25, 0.23, 0.85, z0 + 3.4, z0 + 3.95, 'waar_groen')
         g.doos(b, 0.17, 0.4, 0.23, 0.7, z0 + 3.25, z0 + 4.1, 'waar_groen')
         g.doos(b, 0.17, 0.0, 0.23, 0.25, z0 + 3.65, z0 + 3.7, 'metaal')
     if soort == 'kapper':
         x, y, _ = g.p(0.15, 0.25)
         for k in range(6):
             b.cilinder(x, y, z0 + 1.5 + k * 0.15, 0.08, 0.15, 'waar_rood' if k % 2 else 'waar_wit', seg=10)
-    # zonnescherm (van boven en van onder zichtbaar)
     if luifel:
         m = 'luifel_' + luifel
         a0, a1 = g.p(0.2, 0.0, z0 + 2.58), g.p(w - 0.2, 0.0, z0 + 2.58)
@@ -509,12 +633,11 @@ def winkelpui(b, g, w, z0, gevel, winkel, hoog):
         b.vlak([c0, c1, a1, a0], m, uv)
         b.vlak([c0, c1, d1, d0], m, [(0, 0.2), (w - 0.4, 0.2), (w - 0.4, 0), (0, 0)])
         b.vlak([d0, d1, c1, c0], m, [(0, 0), (w - 0.4, 0), (w - 0.4, 0.2), (0, 0.2)])
-    # terras met tafeltjes, stoelen en parasols
+    # terras: tafeltjes, maar niet voor de deur
     if terras and w >= 4.5:
-        n = int((w - 0.6) / 2.2)
-        start = (w - (n - 1) * 2.2) / 2
+        n = int((deur0 - 0.6) / 2.2)
         for k in range(n):
-            u = start + k * 2.2
+            u = 1.0 + k * 2.2
             tx, ty, _ = g.p(u, 0.8)
             b.cilinder(tx, ty, STOEP_H, 0.04, 0.72, 'metaal', seg=6)
             b.cilinder(tx, ty, STOEP_H + 0.72, 0.36, 0.04, 'wit' if soort != 'resto' else 'hout_licht', seg=14)
@@ -524,11 +647,11 @@ def winkelpui(b, g, w, z0, gevel, winkel, hoog):
             botser(tx - 0.38, ty - 0.38, tx + 0.38, ty + 0.38, 0.8)
             for s in (-1, 1):
                 cx, cy, _ = g.p(u + s * 0.62, 0.8)
-                q = g.r * (-s)                    # stoel kijkt naar de tafel
+                q = g.r * (-s)
                 b.doos(cx - 0.2, cy - 0.2, STOEP_H + 0.42, cx + 0.2, cy + 0.2, STOEP_H + 0.46, 'zwart')
-                for lx in (-0.17, 0.17):
-                    for ly in (-0.17, 0.17):
-                        b.doos(cx + lx - 0.015, cy + ly - 0.015, STOEP_H, cx + lx + 0.015, cy + ly + 0.015,
+                for lx_ in (-0.17, 0.17):
+                    for ly_ in (-0.17, 0.17):
+                        b.doos(cx + lx_ - 0.015, cy + ly_ - 0.015, STOEP_H, cx + lx_ + 0.015, cy + ly_ + 0.015,
                                STOEP_H + 0.42, 'zwart')
                 bx, by = cx - q.x * 0.19, cy - q.y * 0.19
                 b.doos(bx - 0.2 * abs(q.y) - 0.02, by - 0.2 * abs(q.x) - 0.02, STOEP_H + 0.46,
@@ -537,28 +660,24 @@ def winkelpui(b, g, w, z0, gevel, winkel, hoog):
             if luifel is None and k % 2 == 0:
                 b.cilinder(tx, ty, STOEP_H + 0.76, 0.025, 1.6, 'wit', seg=6)
                 b.cilinder(tx, ty, STOEP_H + 2.2, 1.25, 0.35, 'wit', seg=8, r_top=0.05)
-        # krijtbord op de stoep
-        bx, by, _ = g.p(w - 0.35, 1.1)
+        bx, by, _ = g.p(0.45, 1.1)
         b.doos(bx - 0.25, by - 0.2, STOEP_H, bx + 0.25, by + 0.2, STOEP_H + 0.9, 'zwart')
-    # waren buiten
+        botser(bx - 0.25, by - 0.2, bx + 0.25, by + 0.2, 0.9)
     if soort in ('groenten', 'bloemen'):
-        for k in range(int((w - 0.8) / 0.7)):
-            u = 0.5 + k * 0.7
+        for k in range(int((deur0 - 0.7) / 0.7)):
+            u = 0.4 + k * 0.7
             g.doos(b, u, 0.1, u + 0.6, 0.6, STOEP_H, STOEP_H + 0.45, 'hout_licht')
             for _ in range(6):
                 x, y, _ = g.p(u + rnd.uniform(0.1, 0.5), rnd.uniform(0.2, 0.5))
                 b.bol(x, y, STOEP_H + 0.52, 0.08, rnd.choice(['waar_rood', 'waar_oranje', 'waar_groen', 'waar_geel'])
                       if soort == 'groenten' else rnd.choice(['waar_rood', 'waar_roze', 'waar_paars', 'waar_wit']))
-        a, c = g.p(0.4, 0.05), g.p(w - 0.4, 0.7)
-        botser(a[0], a[1], c[0], c[1], 0.6)
-    if soort == 'fietsen':
-        for k in range(2):
-            x, y, _ = g.p(1.2 + k * 2.0, 0.45)
-            fiets_vorm(b, x, y, STOEP_H, g.kant in 'nz', rnd.choice(['fiets_frame', 'fiets_frame2', 'fiets_frame3']))
-        a, c = g.p(0.3, 0.1), g.p(4.0, 0.8)
-        botser(a[0], a[1], c[0], c[1], 1.0)
-    # bovenverdiepingen
-    g.doos(b, 0, -DIEPTE, w, 0, z0 + 3, z0 + hoog, gevel, top='plat_dak', bodem=True, raster=VERDIEP)
+        gbotser(g, 0.4, 0.05, deur0 - 0.2, 0.7, 0.6)
+    if soort == 'fietsen' and deur0 > 2.4:
+        x, y, _ = g.p(1.2, 0.45)
+        fiets_vorm(b, x, y, STOEP_H, g.kant in 'nz', rnd.choice(['fiets_frame', 'fiets_frame2', 'fiets_frame3']))
+        gbotser(g, 0.4, 0.1, 2.0, 0.8, 1.0)
+    # bovenverdiepingen, met een wit plafond voor de winkel
+    g.doos(b, 0, -D, w, 0, z0 + 3, hz, gevel, top='plat_dak', bodem=True, raster=VERDIEP, mats={'b': 'plafond'})
 
 
 def huisvoorkant(b, g, w, z0, verd):
@@ -620,7 +739,7 @@ def bouw_huizenrij(col, naam, x0, y0, x1, y1, straatkant, hoogtes, langs_x, wink
             winkel = winkel_rij.pop()
         hellend = verd <= 3 and rnd.random() < 0.7
         if winkel:
-            winkelpui(b, g, w, STOEP_H, gevel, winkel, h)
+            winkelpui(b, g, w, STOEP_H, gevel, winkel, h, col)
         else:
             b.doos(bx0, by0, STOEP_H, bx1, by1, STOEP_H + h, gevel, 'plat_dak', raster=VERDIEP, schaal=3)
             huisvoorkant(b, g, w, STOEP_H, verd)
@@ -643,7 +762,8 @@ def bouw_huizenrij(col, naam, x0, y0, x1, y1, straatkant, hoogtes, langs_x, wink
                 cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
                 b.doos(cx - 1, cy - 1, hz, cx + 1, cy + 1, hz + 1.6, 'metaal', schaal=2)
         b.klaar()
-        botser(bx0, by0, bx1, by1, hz + nok)
+        if not winkel:                            # een winkel heeft eigen muren om tegen te botsen
+            botser(bx0, by0, bx1, by1, hz + nok)
         pos += w
 
 
@@ -1220,6 +1340,7 @@ def main():
         'park': park,
         'duiven': duiven,
         'praatplekken': praat,
+        'winkels': winkels_json,
     }
     with open(os.path.join(UIT, 'botsing.json'), 'w', encoding='utf-8') as f:
         json.dump(data, f, separators=(',', ':'))
@@ -1228,6 +1349,7 @@ def main():
     n_vl = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
     print(f'Ministad klaar: {n_obj} objecten, {n_vl} vlakken, {len(vakken)} botsvakken, '
           f'{len(zitplaatsen)} zitplaatsen, {len(katplekken)} katplekken')
+    print('Winkels:', ', '.join(f"{w['naam']} ({w['soort']})" for w in winkels_json))
 
     if doe_render:
         render(cam, argv[argv.index('--render') + 1:])

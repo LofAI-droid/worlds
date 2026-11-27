@@ -11,6 +11,7 @@ export const KLEUREN = {
   schoen: ['#262626', '#5d4037', '#ecf0f1', '#c0392b', '#2c3e50'],
   helm: ['#f2f2f2', '#2c3e50', '#e74c3c', '#f1c40f', '#27ae60'],
   rugzak: ['#e0a823', '#2e86de', '#c0392b', '#27ae60', '#2f3640'],
+  rok: ['#e84393', '#2c3e50', '#8e44ad', '#c0392b', '#3d5a80', '#d35400', '#16a085'],
   hond: [['#a8743f', '#6e4a2a'], ['#1f1f1f', '#111111'], ['#e8dcc0', '#c9b48f'], ['#d9a441', '#b07a2a'],
     ['#7a7a7a', '#4a4a4a'], ['#ffffff', '#3a2a20']],
   kat: ['#d9883b', '#2a2a2a', '#9b9b9b', '#f0e6d8', '#7a5230'],
@@ -26,7 +27,7 @@ const PERSOON = {
   romp: 'Persoon_romp', hoofd: 'Persoon_hoofd', armL: 'Persoon_armL', armR: 'Persoon_armR',
   beenL: 'Persoon_beenL', beenR: 'Persoon_beenR', knieL: 'Persoon_knieL', knieR: 'Persoon_knieR',
   haarKort: 'Persoon_haar_kort', haarLang: 'Persoon_haar_lang', pet: 'Persoon_pet', helm: 'Persoon_helm',
-  rugzak: 'Persoon_rugzak'
+  rugzak: 'Persoon_rugzak', rok: 'Persoon_rok'
 };
 const HOND = {
   lijf: 'Hond_lijf', kop: 'Hond_kop', staart: 'Hond_staart', lv: 'Hond_poot_lv', rv: 'Hond_poot_rv',
@@ -90,7 +91,7 @@ export class Figuren {
     return d;
   }
 
-  /** Een mens. opties: { kleuren, haar: 'kort'|'lang'|'geen', pet, helm, rugzak, schaal } */
+  /** Een mens. opties: { kleuren, haar: 'kort'|'lang'|'geen', pet, helm, rugzak, rok, schaal } */
   persoon(opties = {}, rnd = Math.random) {
     const k = opties.kleuren || {};
     const kleuren = {
@@ -101,7 +102,8 @@ export class Figuren {
       p_schoen: k.schoen || kies(KLEUREN.schoen, rnd),
       p_helm: k.helm || kies(KLEUREN.helm, rnd),
       p_rugzak: k.rugzak || kies(KLEUREN.rugzak, rnd),
-      p_pet: k.pet || kies(KLEUREN.shirt, rnd)
+      p_pet: k.pet || kies(KLEUREN.shirt, rnd),
+      p_rok: k.rok || kies(KLEUREN.rok, rnd)
     };
     const obj = this.kloon('Persoon', kleuren);
     const d = this.delen(obj, PERSOON);
@@ -111,6 +113,7 @@ export class Figuren {
     d.pet.visible = !!opties.pet && !opties.helm;
     d.helm.visible = !!opties.helm;
     d.rugzak.visible = opties.rugzak ?? rnd() < 0.15;
+    d.rok.visible = opties.rok ?? (haar === 'lang' && rnd() < 0.4);
     const schaal = opties.schaal || 1;
     obj.scale.setScalar(schaal);
     return { obj, d, schaal, fase: rnd() * 6.28, kijk: 0 };

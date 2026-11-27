@@ -39,6 +39,7 @@ def materialen():
     m('p_pet', '#c0392b', 0.7)
     m('p_helm', '#f2f2f2', 0.4)
     m('p_rugzak', '#e0a823', 0.8)
+    m('p_rok', '#e84393', 0.85)
     # dieren
     m('h_vacht', '#a8743f', 0.95)
     m('h_oor', '#6e4a2a', 0.95)
@@ -110,6 +111,9 @@ def persoon(col, x):
         b.doos(-0.17, -0.1, 0.0, 0.17, 0.1, 0.14, 'p_broek')
         b.doos(-0.19, -0.11, 0.12, 0.19, 0.11, 0.55, 'p_shirt')
     r = deel('Persoon_romp', col, w, (0, 0, 0.9), romp)
+
+    deel('Persoon_rok', col, r, (0, 0, 0),
+         lambda b: b.cilinder(0, 0, -0.36, 0.27, 0.5, 'p_rok', seg=10, r_top=0.195))
 
     deel('Persoon_rugzak', col, r, (0, -0.11, 0.33),
          lambda b: b.doos(-0.15, -0.15, -0.18, 0.15, 0.0, 0.17, 'p_rugzak'))
@@ -444,7 +448,7 @@ def main():
 
     if '--render' in argv:
         # in de browser draagt iedereen maar één ding op het hoofd; voor de foto ook
-        for naam in ('Persoon_helm', 'Persoon_haar_lang'):
+        for naam in ('Persoon_helm', 'Persoon_haar_lang', 'Persoon_rok'):
             bpy.data.objects[naam].hide_render = True
         sc = bpy.context.scene
         sc.render.engine = 'CYCLES'

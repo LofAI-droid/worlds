@@ -468,6 +468,13 @@ class Gevel:
         self.breedte = (Vector((*eind[1], 0)) - self.f0).length
         self.achter = {'n': 'z', 'z': 'n', 'o': 'w', 'w': 'o'}[kant]
 
+    @staticmethod
+    def kant_van(vec):
+        """De zijde ('n','z','o','w') waar een horizontale richting naar wijst."""
+        if abs(vec.x) > abs(vec.y):
+            return 'o' if vec.x > 0 else 'w'
+        return 'n' if vec.y > 0 else 'z'
+
     def p(self, u, v, z=0.0):
         q = self.f0 + self.r * u + self.out * v
         return (q.x, q.y, z)

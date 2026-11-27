@@ -548,6 +548,7 @@ class Duif {
   }
   vlieg(vanX, vanZ) {
     const g = this.g;
+    if (this.leven.gebeurtenis) this.leven.gebeurtenis('duif', this);
     const dx = this.x - vanX, dz = this.z - vanZ, l = Math.hypot(dx, dz) || 1;
     const nok = g.nokken[Math.floor(this.leven.rnd() * g.nokken.length)];
     this.baan = {
