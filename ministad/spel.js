@@ -1,8 +1,9 @@
-// Ministad — het boodschappenspel: een lijstje, een portemonnee, vijf minuten en winkels om in te gaan.
+// Ministad — het boodschappenspel: een lijstje, een portemonnee, een chronometer en winkels om in te gaan.
 import * as THREE from 'three';
 import { poseStaan, poseLopen, poseZitten } from './figuren.js';
 
-export const SPEELTIJD = 5 * 60;
+export const WEDSTRIJD = 1;          // het vaste lijstje waarmee iedereen tegen elkaar speelt
+const BORD = 10;                     // zoveel tijden houdt het scorebord bij
 const AANTAL = 6;
 const DEUR_OPEN = 1.45;
 
@@ -38,8 +39,8 @@ const KERN = ['bakker', 'groenten', 'slager', 'bloemen', 'apotheek', 'kranten'];
 const EXTRA = ['boeken', 'choco', 'speelgoed', 'ijs', 'frituur', 'fietsen', 'kapper', 'kledij'];
 
 export const euro = (x) => '€ ' + x.toFixed(2).replace('.', ',');
-const klok = (s) => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-const schud = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const klok = (s) => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const schud = (a, r) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const hoek = (dx, dz) => Math.atan2(-dx, -dz);
 
 function warenVan(w) {
@@ -51,12 +52,17 @@ function zaad(n) {
   return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
 }
 
+function leesScores(nr) {
+  try { return JSON.parse(localStorage.getItem('ministad-scores-' + nr) || '[]'); } catch (e) { return []; }
+}
+
 export class Spel {
   constructor(ctx) {
     Object.assign(this, ctx);           // scene, stad, figuren, geluid, speler, el, deuren (Map id -> Object3D)
     this.toestand = 'start';
     this.winkels = this.stad.winkels;
     this.naam = 'Speler';
+    this.lijstNr = WEDSTRIJD;
     this.deurData = new Map();
     for (const w of this.winkels) {
       const obj = this.deuren.get(w.id);
@@ -79,21 +85,41 @@ export class Spel {
   }
 
   // ---------- lijstje en geld ----------
-  maakLijstje() {
+  /** Hetzelfde nummer geeft altijd hetzelfde lijstje en hetzelfde geld: eerlijk om tijden te vergelijken. */
+  maakLijstje(nr = this.lijstNr) {
+    this.lijstNr = nr;
+    const r = zaad(nr * 7919);
     const aanwezig = new Set(this.winkels.map((w) => w.soort));
-    const kern = schud(KERN.filter((s) => aanwezig.has(s)));
-    const extra = schud(EXTRA.filter((s) => aanwezig.has(s)));
+    const kern = schud(KERN.filter((s) => aanwezig.has(s)), r);
+    const extra = schud(EXTRA.filter((s) => aanwezig.has(s)), r);
     const soorten = [...kern.slice(0, 4), ...extra].slice(0, AANTAL);
     this.lijst = soorten.map((soort) => {
       const opties = WAREN[soort].filter((w) => w[2] <= 7);
-      const [naam, teken, prijs] = opties[Math.floor(Math.random() * opties.length)];
+      const [naam, teken, prijs] = opties[Math.floor(r() * opties.length)];
       return { naam, teken, prijs, soort, gedaan: false };
     });
     const som = this.lijst.reduce((a, b) => a + b.prijs, 0);
-    this.startGeld = Math.ceil(som + 3 + Math.random() * 3);
+    this.startGeld = Math.ceil(som + 3 + r() * 3);
     this.geld = this.startGeld;
     this.tas = [];
-    this.tijd = SPEELTIJD;
+    this.tijd = 0;
+  }
+
+  nieuwLijstje(wedstrijd = false) {
+    this.maakLijstje(wedstrijd ? WEDSTRIJD : 2 + Math.floor(Math.random() * 9000));
+    this.bouwStartlijst();
+  }
+
+  toonScores(ol, nieuw = null) {
+    const scores = leesScores(this.lijstNr);
+    ol.innerHTML = '';
+    scores.forEach((sc) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="wie">${sc.wie === 'meisje' ? '👧' : '👦'} ${sc.naam.replace(/[<>&]/g, '')}</span><b>${klok(sc.tijd)}</b>`;
+      if (nieuw && sc.id === nieuw) li.classList.add('nieuw');
+      ol.append(li);
+    });
+    return scores.length;
   }
 
   bouwStartlijst() {
@@ -104,6 +130,10 @@ export class Spel {
       this.el.startLijst.append(li);
     }
     this.el.startGeld.textContent = euro(this.startGeld);
+    const wedstrijd = this.lijstNr === WEDSTRIJD;
+    this.el.lijstSoort.textContent = wedstrijd ? 'Wedstrijdlijstje' : 'Lijstje nr. ' + this.lijstNr;
+    this.el.wedstrijdKnop.hidden = wedstrijd;
+    this.el.startScoreBlok.hidden = !this.toonScores(this.el.startScores);
   }
 
   bouwLijst() {
@@ -124,10 +154,11 @@ export class Spel {
     this.el.lijstTeller.textContent = `${n}/${this.lijst.length}`;
   }
 
-  begin(naam) {
+  begin(naam, wie) {
     this.naam = (naam || '').trim().slice(0, 16) || 'Speler';
+    this.wie = wie;
     this.toestand = 'spel';
-    this.tijd = SPEELTIJD;
+    this.tijd = 0;
     this.geld = this.startGeld;
     this.tas = [];
     this.bouwLijst();
@@ -140,7 +171,7 @@ export class Spel {
   opnieuw() {
     for (const d of this.deurData.values()) { d.doel = 0; }
     this.sluitPaneel();
-    this.maakLijstje();
+    this.maakLijstje(this.lijstNr);
     this.bouwStartlijst();
     this.toestand = 'start';
   }
@@ -177,14 +208,26 @@ export class Spel {
       sprite.renderOrder = 10;
       sprite.position.set(w.ingang.x, w.vloer + 4.3, w.ingang.z);
       this.scene.add(sprite);
-      this.markers.push({ sprite, w, fase: Math.random() * 6 });
+      this.markers.push({ sprite, w, fase: Math.random() * 6, zichtbaar: true });
     }
+    this.kiesDichtste();
+  }
+
+  /** Van elke soort winkel die je nog nodig hebt, toon je alleen de dichtstbijzijnde. */
+  kiesDichtste() {
+    const s = this.speler, beste = new Map();
+    for (const m of this.markers) {
+      const a = Math.hypot(m.w.ingang.x - s.x, m.w.ingang.z - s.z);
+      const b = beste.get(m.w.soort);
+      if (!b || a < b.a) beste.set(m.w.soort, { m, a });
+    }
+    for (const m of this.markers) m.zichtbaar = beste.get(m.w.soort)?.m === m;
   }
 
   /** Voor de kaart: waar moet je nog naartoe? */
   kaartPunten() {
     if (this.toestand !== 'spel' && this.toestand !== 'winkel') return [];
-    return this.markers.map((m) => ({ x: m.w.ingang.x, z: m.w.ingang.z, teken: this.lijst.find((l) => !l.gedaan && l.soort === m.w.soort)?.teken || '' }));
+    return this.markers.filter((m) => m.zichtbaar).map((m) => ({ x: m.w.ingang.x, z: m.w.ingang.z, teken: this.lijst.find((l) => !l.gedaan && l.soort === m.w.soort)?.teken || '' }));
   }
 
   // ---------- deuren ----------
@@ -321,7 +364,12 @@ export class Spel {
     }
     el.winkelGeld.textContent = 'In je portemonnee: ' + euro(this.geld);
     this.toonHud();
-    if (this.lijst.every((l) => l.gedaan)) setTimeout(() => this.einde(true), 1200);
+    if (this.lijst.every((l) => l.gedaan)) setTimeout(() => this.einde('klaar'), 1200);
+    else {
+      // genoeg geld over voor wat nog op het lijstje staat?
+      const nodig = this.lijst.filter((l) => !l.gedaan).reduce((a, l) => a + l.prijs, 0);
+      if (this.geld + 1e-9 < nodig) setTimeout(() => this.einde('geld'), 1500);
+    }
   }
 
   sluitPaneel() { this.el.winkel.hidden = true; this.huidigeWinkel = null; }
@@ -362,37 +410,35 @@ export class Spel {
   }
 
   // ---------- einde ----------
-  einde(gewonnen) {
+  einde(hoe) {
     if (this.toestand === 'einde') return;
     this.sluitPaneel();
     this.toestand = 'einde';
     const el = this.el;
-    const gebruikt = Math.round(SPEELTIJD - this.tijd);
-    let scores = [];
-    try { scores = JSON.parse(localStorage.getItem('ministad-scores') || '[]'); } catch (e) { scores = []; }
-    if (gewonnen) {
+    const tijd = Math.round(this.tijd * 10) / 10;
+    let nieuw = null;
+    if (hoe === 'klaar') {
       this.geluid.gewonnen();
       this.geluid.spreek(`Hoera ${this.naam}, alles gekocht!`);
-      el.eindeTitel.textContent = `Hoera, ${this.naam}!`;
-      el.eindeTekst.textContent = `Je hebt alle boodschappen in ${klok(gebruikt)} gehaald, en je hebt nog ${euro(this.geld)} over.`;
-      scores.push({ naam: this.naam, tijd: gebruikt, geld: this.geld });
+      const scores = leesScores(this.lijstNr);
+      nieuw = Date.now();
+      scores.push({ id: nieuw, naam: this.naam, wie: this.wie, tijd, geld: this.geld, datum: new Date().toISOString().slice(0, 10) });
       scores.sort((a, b) => a.tijd - b.tijd || b.geld - a.geld);
-      scores = scores.slice(0, 5);
-      try { localStorage.setItem('ministad-scores', JSON.stringify(scores)); } catch (e) { /* geen opslag */ }
+      const plaats = scores.findIndex((sc) => sc.id === nieuw) + 1;
+      try { localStorage.setItem('ministad-scores-' + this.lijstNr, JSON.stringify(scores.slice(0, BORD))); } catch (e) { /* geen opslag */ }
+      el.eindeTitel.textContent = `Hoera, ${this.naam}!`;
+      el.eindeTekst.textContent = `Je hebt alle boodschappen in ${klok(tijd)} gehaald en je hebt nog ${euro(this.geld)} over.` +
+        (plaats <= BORD ? (plaats === 1 ? ' Dat is de snelste tijd van allemaal!' : ` Je staat ${plaats}${plaats === 8 ? 'ste' : 'de'} op het scorebord!`) : '');
     } else {
       this.geluid.verloren();
       const mist = this.lijst.filter((l) => !l.gedaan);
-      el.eindeTitel.textContent = 'De tijd is op!';
-      el.eindeTekst.textContent = `Jammer, ${this.naam}. Je had nog nodig: ` + mist.map((l) => `${l.teken} ${l.naam.toLowerCase()}`).join(', ') + '.';
+      el.eindeTitel.textContent = 'Oei, je geld is op!';
+      el.eindeTekst.textContent = `Jammer, ${this.naam}. Je hebt niet genoeg geld meer voor: ` +
+        mist.map((l) => `${l.teken} ${l.naam.toLowerCase()}`).join(', ') + '. Koop de volgende keer alleen wat op je lijstje staat.';
     }
-    el.scores.innerHTML = '';
-    for (const s of scores) {
-      const li = document.createElement('li');
-      li.textContent = `${s.naam}: ${klok(s.tijd)}`;
-      el.scores.append(li);
-    }
-    el.scoreBlok.hidden = !scores.length;
+    el.scoreBlok.hidden = !this.toonScores(el.scores, nieuw);
     el.einde.hidden = false;
+    el.melding.classList.remove('zichtbaar');
     for (const m of this.markers) this.scene.remove(m.sprite);
     this.markers = [];
     if (this.naEinde) this.naEinde();
@@ -407,22 +453,16 @@ export class Spel {
 
   toonHud() {
     this.el.tijd.textContent = klok(this.tijd);
-    this.el.tijdBlok.classList.toggle('bijna', this.tijd <= 30);
     this.el.geld.textContent = euro(this.geld);
   }
 
   update(dt, t) {
     const s = this.speler;
-    // tijd
+    // de chronometer loopt (ook in de winkel, niet tijdens de pauze)
     if (this.toestand === 'spel' || this.toestand === 'winkel') {
-      this.tijd -= dt;
-      const sec = Math.ceil(this.tijd);
-      if (sec !== this.laatsteTik) {
-        this.laatsteTik = sec;
-        if (sec <= 30 && sec > 0) this.geluid.tik(sec <= 10);
-        this.toonHud();
-      }
-      if (this.tijd <= 0) { this.tijd = 0; this.toonHud(); this.einde(false); }
+      this.tijd += dt;
+      const sec = Math.floor(this.tijd);
+      if (sec !== this.laatsteTik) { this.laatsteTik = sec; this.toonHud(); }
     }
     // deuren draaien
     for (const d of this.deurData.values()) {
@@ -483,8 +523,11 @@ export class Spel {
       }
       for (const z of b.zitters) poseZitten(z, t);
     }
-    // markeringen dansen een beetje
+    // markeringen dansen een beetje; binnen in een winkel zie je ze niet
+    this.kiesTimer = (this.kiesTimer || 0) - dt;
+    if (this.kiesTimer <= 0) { this.kiesDichtste(); this.kiesTimer = 0.5; }
     for (const m of this.markers) {
+      m.sprite.visible = m.zichtbaar && !this.binnenIn;
       m.fase += dt * 3;
       m.sprite.position.y = m.w.vloer + 4.2 + Math.sin(m.fase) * 0.18;
       const a = Math.hypot(m.w.ingang.x - s.x, m.w.ingang.z - s.z);

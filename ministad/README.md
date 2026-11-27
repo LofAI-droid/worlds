@@ -1,10 +1,30 @@
-# Ministad
+# Boodschappen in Ministad
 
-Een kleine, levendige stad, gebouwd met Blender. In de browser loop je er rond als een mannetje.
+Een spelletje in een kleine, levendige stad, gebouwd met Blender: wie haalt het snelst alle
+boodschappen van het lijstje?
 
-![De stad van bovenaf](blender/voorbeeld-lucht.png)
 ![Een winkelstraat](blender/voorbeeld-winkels.png)
-![De bewoners](blender/voorbeeld-figuren.png)
+
+## Het spel
+
+1. Typ je naam, kies een jongen of een meisje en de kleur van je kleren.
+2. Je krijgt een lijstje met 6 boodschappen en wat geld in je portemonnee.
+3. Druk op **Start!**: de chronometer begint te lopen.
+4. Volg de tekentjes boven de winkels en op de kaart. Open de deur (`E` of de knop onderaan),
+   loop naar de toonbank en koop wat je nodig hebt. Op je lijstje wordt die lijn doorstreept.
+5. Alles gekocht? Je tijd komt op het **scorebord** (de 10 snelsten, bewaard in de browser).
+   Koop je te veel en heb je niet genoeg geld meer voor je lijstje, dan is het spel uit.
+
+Iedereen speelt standaard met hetzelfde **wedstrijdlijstje**, zodat de tijden eerlijk te vergelijken
+zijn. Met *🎲 Ander lijstje* krijg je een nieuw lijstje met een eigen scorebord.
+
+In de winkels staan een winkelier (die je bij naam begroet, als je browser Nederlands kan
+spreken) en soms andere klanten. Alle geluiden worden in de browser gemaakt: voetstappen, de
+deurbel, de kassa, munten, het potlood, verkeer, fietsbellen, vogels en duiven.
+
+Met **📻** (of `R`) zet je de radio op: de Spotify-speler met de playlist van Ministad. Wie in die
+browser bij Spotify is ingelogd, hoort hele nummers, anders stukjes van 30 seconden. De speler
+wordt pas geladen als je hem opent.
 
 ## Wat is er te zien?
 
@@ -45,10 +65,11 @@ en ga dan naar <http://localhost:8000/ministad/>. Of zet GitHub Pages aan voor d
 | Computer | Telefoon of tablet |
 | --- | --- |
 | `W A S D` of pijltjes (azerty: `Z Q S D`): lopen | links slepen: lopen |
+| `E`: deur openen, kopen, `1`–`4`: snel kopen | knop onderaan: deur openen of kopen |
 | muis: rondkijken, scroll: zoomen | rechts slepen: rondkijken |
 | `Shift`: rennen, `Spatie`: springen | rechts dubbeltikken: springen |
 | `V`: door zijn ogen of achter het mannetje | knop bovenaan: door zijn ogen |
-| `M`: kaart aan/uit, `Esc`: pauze | knop linksboven: pauze |
+| `M`: kaart, `R`: radio, `Esc`: pauze | knop linksonder: pauze |
 
 Je botst tegen gebouwen, bomen, lantaarns, auto's en mensen. De camera blijft uit de muren
 en bladeren vlak voor de camera worden doorzichtig.
@@ -80,7 +101,7 @@ of bv. `-- --render winkels` voor één beeld.
 | `blender/figuren.blend` | alle figuren naast elkaar, elk met draaipunten in de gewrichten |
 | `ministad.glb` | de stad voor de browser (met Draco-compressie) |
 | `figuren.glb` | mens, hond, kat, duif, fiets, bakfiets, scooter, auto, taxi en bus |
-| `botsing.json` | obstakels, zitplaatsen, kattenplekjes, de busroute en haltes, het park en het plein |
+| `botsing.json` | obstakels, zitplaatsen, kattenplekjes, de busroute en haltes, het park, het plein en alle winkels (deur, toonbank, winkelier...) |
 
 Wil je een andere stad? Verander `ZAAD` bovenaan `bouw_stad.py`, of speel met `BLOKKEN`,
 `BLOK`, `WEG`, de lijst `WINKELS` en de bijzondere blokken `PARK`, `PLEIN` en `ZAKEN`.
@@ -92,6 +113,10 @@ Wil je een andere stad? Verander `ZAAD` bovenaan `bouw_stad.py`, of speel met `B
 - `figuren.js` kloont de figuren uit `figuren.glb`, geeft elke persoon andere kleuren
   (huid, kleren, haar, pet, helm, rugzak) en zet ze in een houding: stappen, rennen, staan,
   praten, zitten, fietsen.
+- `spel.js` is het spel: het lijstje (met een vast toevalszaad, zodat hetzelfde nummer altijd
+  hetzelfde lijstje geeft), het geld, de chronometer, de deuren, winkeliers en klanten, het
+  winkelscherm, de tekentjes en het scorebord.
+- `geluid.js` maakt alle geluiden met Web Audio, zonder geluidsbestanden.
 - `leven.js` is de stad zelf: een wegennet waarop elk kruispunt één voertuig tegelijk binnenlaat,
   voertuigen die afstand houden en alleen een kruispunt oprijden als er erachter plaats is,
   voetgangers die over de stoepen van blok naar blok lopen, en de dieren.

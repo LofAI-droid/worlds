@@ -1326,7 +1326,7 @@ def main():
     data = {
         'versie': 2,
         'grens': HALF + 40,
-        'start': {'x': weg_as(2) + WEG / 2 + LOOPLIJN, 'z': 6.0, 'richting': 0},
+        'start': {'x': 1.0, 'z': -(blok_bereik(PARK[1])[1] - LOOPLIJN), 'richting': 0},   # parkpad, zicht op de winkels
         'vakken': vakken,
         'straten': [weg_as(i) for i in range(BLOKKEN + 1)],
         'blokken': [list(blok_bereik(j)) for j in range(BLOKKEN)],

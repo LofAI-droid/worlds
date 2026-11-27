@@ -186,8 +186,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid #fff; outline-off
 }
 .pil b { font-variant-numeric: tabular-nums; }
 .knopje { border: 0; color: inherit; font: inherit; cursor: pointer; padding: 0 12px; }
-.tijd.bijna { background: rgba(200, 50, 40, 0.88); animation: klop 1s ease-in-out infinite; }
-@keyframes klop { 50% { transform: scale(1.06); } }
 
 .lijstje {
   position: fixed;
@@ -353,6 +351,26 @@ button:focus-visible, input:focus-visible { outline: 3px solid #fff; outline-off
   background: rgba(255, 255, 255, 0.55);
 }
 
+/* ---------- radio ---------- */
+.radio {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(66px, calc(env(safe-area-inset-bottom) + 60px));
+  width: min(340px, calc(100% - 24px));
+  padding: 10px 10px 8px;
+  border-radius: 16px;
+  background: var(--paneel);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  z-index: 12;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+/* verborgen, maar niet weg: zo speelt de muziek door */
+.radio:not(.open) { transform: translateY(calc(100% + 90px)); opacity: 0; pointer-events: none; }
+.radio-kop { display: flex; justify-content: space-between; align-items: center; margin: 0 2px 8px; font-weight: 700; }
+.radio-dicht { width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.1); color: inherit; cursor: pointer; }
+.radio-speler iframe { display: block; width: 100%; height: 152px; border: 0; border-radius: 12px; }
+.radio-noot { margin: 6px 2px 0; font-size: 0.75rem; color: var(--zacht); }
+
 /* ---------- in de winkel ---------- */
 .winkelpaneel { width: min(560px, 100%); }
 .ballon {
@@ -411,7 +429,23 @@ button:focus-visible, input:focus-visible { outline: 3px solid #fff; outline-off
 .winkelgeld { margin: 14px 0 12px; color: var(--zacht); }
 
 .scores { margin: 0 0 16px; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); text-align: left; }
-.scores ol { margin: 0; padding-left: 1.4em; }
+.scores ol { margin: 0; padding-left: 1.6em; }
+.scores li { padding: 2px 4px; border-radius: 6px; }
+.scores li b { float: right; font-variant-numeric: tabular-nums; }
+.scores li.nieuw { background: rgba(241, 194, 125, 0.25); font-weight: 700; }
+.start .scores { margin: 0 0 14px; max-height: 150px; overflow-y: auto; }
+.lijstsoort { font-weight: 700; }
+.lijstknoppen { display: flex; gap: 8px; margin: -6px 0 14px; flex-wrap: wrap; }
+.klein {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(243, 241, 234, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--tekst);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
 
 /* ---------- kleine schermen ---------- */
 @media (max-width: 700px) {
@@ -422,9 +456,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid #fff; outline-off
   .kaart { width: 128px; height: 128px; top: max(64px, calc(env(safe-area-inset-top) + 56px)); bottom: auto; }
   .pil { height: 40px; padding: 0 11px; font-size: 1rem; }
   .actie { bottom: max(150px, calc(env(safe-area-inset-bottom) + 140px)); }
+  .melding { top: auto; bottom: max(220px, calc(env(safe-area-inset-bottom) + 210px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .knop, .stok, .melding, .waar, .lijstje li::after { transition: none; }
-  .actie, .tijd.bijna { animation: none; }
+  .knop, .stok, .melding, .waar, .lijstje li::after, .radio { transition: none; }
+  .actie { animation: none; }
 }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Boodschappen in Ministad</title>
-  <meta name="description" content="Haal in vijf minuten alle boodschappen van je lijstje in een kleine stad, gebouwd in Blender.">
+  <meta name="description" content="Haal zo snel mogelijk alle boodschappen van je lijstje in een kleine stad, gebouwd in Blender.">
   <meta name="theme-color" content="#07080d">
   <meta name="color-scheme" content="dark">
   <link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
@@ -25,7 +25,7 @@
   <main id="intro" class="laag laag-start" aria-labelledby="titel">
     <div class="paneel start">
       <h1 id="titel">Boodschappen <span>in Ministad</span></h1>
-      <p class="ondertitel">Haal in 5 minuten alles van je lijstje.</p>
+      <p class="ondertitel">Wie haalt het snelst alles van het lijstje?</p>
 
       <label class="veld">
         <span>Hoe heet je?</span>
@@ -48,8 +48,18 @@
       </fieldset>
 
       <div class="briefje">
-        <p class="briefje-kop">Je lijstje <span>in je portemonnee: <b id="startGeld">€ 0</b></span></p>
+        <p class="briefje-kop"><span id="lijstSoort" class="lijstsoort">Wedstrijdlijstje</span> <span>in je portemonnee: <b id="startGeld">€ 0</b></span></p>
         <ul id="startLijst"></ul>
+      </div>
+      <div class="lijstknoppen">
+        <button id="nieuwLijst" class="klein" type="button">🎲 Ander lijstje</button>
+        <button class="klein radio-aan" type="button">📻 Radio</button>
+        <button id="wedstrijdKnop" class="klein" type="button" hidden>🏆 Terug naar het wedstrijdlijstje</button>
+      </div>
+
+      <div id="startScoreBlok" class="scores" hidden>
+        <h3>Scorebord</h3>
+        <ol id="startScores"></ol>
       </div>
 
       <button id="wandel" class="knop" type="button" disabled>Laden&hellip;</button>
@@ -62,23 +72,25 @@
           <li><kbd>Shift</kbd> <span>rennen</span> <kbd>Spatie</kbd> <span>springen</span></li>
           <li><kbd>E</kbd> <span>deur openen, kopen aan de toonbank</span></li>
           <li><kbd>muis</kbd> <span>rondkijken,</span> <kbd>scroll</kbd> <span>zoomen,</span> <kbd>V</kbd> <span>door je ogen</span></li>
-          <li><kbd>M</kbd> <span>kaart,</span> <kbd>Esc</kbd> <span>pauze</span></li>
+          <li><kbd>M</kbd> <span>kaart,</span> <kbd>R</kbd> <span>radio,</span> <kbd>Esc</kbd> <span>pauze</span></li>
         </ul>
         <ul class="uitleg aanraak">
           <li><span class="duim">links</span> <span>sleep om te lopen</span></li>
           <li><span class="duim">rechts</span> <span>sleep om rond te kijken, dubbeltik om te springen</span></li>
           <li><span class="duim">knop</span> <span>deur openen of kopen</span></li>
         </ul>
-        <p>De tekentjes boven de winkels en op de kaart tonen waar je moet zijn.</p>
+        <p>De tekentjes boven de winkels en op de kaart tonen waar je moet zijn. De klok loopt vanaf je start.
+          Let op je geld: koop je te veel, dan heb je misschien niet genoeg meer voor je lijstje.</p>
       </details>
     </div>
   </main>
 
   <!-- tijdens het spel -->
   <div id="hud" class="hud" hidden>
-    <div id="tijdBlok" class="pil tijd"><span aria-hidden="true">⏱</span> <b id="tijd">5:00</b></div>
+    <div id="tijdBlok" class="pil tijd"><span aria-hidden="true">⏱</span> <b id="tijd">0:00</b></div>
     <div class="pil"><span aria-hidden="true">👛</span> <b id="geld">€ 0</b></div>
     <button id="geluidKnop" class="pil knopje" type="button" aria-label="Geluid aan of uit">🔊</button>
+    <button class="pil knopje radio-aan" type="button" aria-label="Radio">📻</button>
   </div>
 
   <aside id="lijstBlok" class="lijstje" hidden>
@@ -97,6 +109,16 @@
   <div id="stok" class="stok" aria-hidden="true"><div class="knop-stok"></div></div>
   <div id="vizier" class="vizier" aria-hidden="true" hidden></div>
 
+  <!-- radio: de Spotify-speler wordt pas geladen als je hem opent -->
+  <aside id="radio" class="radio" aria-label="Radio" aria-hidden="true">
+    <div class="radio-kop">
+      <span>📻 Ministad Radio</span>
+      <button id="radioDicht" class="radio-dicht" type="button" aria-label="Radio verbergen">✕</button>
+    </div>
+    <div id="radioSpeler" class="radio-speler"></div>
+    <p class="radio-noot">Niet ingelogd bij Spotify? Dan hoor je stukjes van 30 seconden.</p>
+  </aside>
+
   <!-- in de winkel -->
   <section id="winkel" class="laag laag-licht" aria-labelledby="winkelNaam" hidden>
     <div class="paneel winkelpaneel">
@@ -114,6 +136,7 @@
       <h2 id="pauzeTitel">Pauze</h2>
       <p class="ondertitel">De klok staat stil.</p>
       <button id="verder" class="knop" type="button">Verder spelen</button>
+      <button class="knop knop-zacht radio-aan" type="button">📻 Radio</button>
       <button id="stoppen" class="knop knop-zacht" type="button">Opnieuw beginnen</button>
     </div>
   </section>
@@ -124,7 +147,7 @@
       <h2 id="eindeTitel">Hoera!</h2>
       <p id="eindeTekst" class="ondertitel"></p>
       <div id="scoreBlok" class="scores" hidden>
-        <h3>Snelste boodschappers</h3>
+        <h3>Scorebord</h3>
         <ol id="scores"></ol>
       </div>
       <button id="nogEens" class="knop" type="button">Nog eens spelen</button>
