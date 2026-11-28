@@ -492,7 +492,7 @@ def boom(rnd, p):
             def ruw(i, j, k=k, zaad=zaad):
                 return 1 + k * noise.noise(Vector((i * 0.7, j * 0.9, zaad)))
         buis(gs, pts, radii, schors, n=p['zijden'][niv], tegel=p['tegel'], ruw=ruw, v0=v0)
-        if niv + 1 < len(p['aantal']):
+        if niv < len(p['aantal']):
             n = p['aantal'][niv]
             t0, t1 = p['vanaf'][niv], 1.0
             az = rnd.uniform(0, 6.28)

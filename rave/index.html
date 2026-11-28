@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rave against the machine</title>
+  <meta name="description" content="Een nachtelijk psytrance-feest in het bos. Loop rond, dans mee en laat de wereld meeluisteren met je muziek.">
+  <meta name="theme-color" content="#05060c">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+  <link rel="stylesheet" href="stijl.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="doek"></canvas>
+
+  <main id="intro" class="laag" aria-labelledby="titel">
+    <div class="paneel">
+      <h1 id="titel">Rave against the machine</h1>
+      <p class="ondertitel">Een psytrance-feest bij nacht, ergens diep in het bos</p>
+      <ul class="uitleg toetsen">
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span>wandelen (ook pijltjes, of <kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> op azerty)</span></li>
+        <li><kbd>muis</kbd> <span>rondkijken, <kbd>scroll</kbd> zoomen</span></li>
+        <li><kbd>Shift</kbd> <span>lopen</span> <kbd>Spatie</kbd> <span>springen</span></li>
+        <li><kbd>E</kbd> <span>dansen</span> <kbd>R</kbd> <span>salto</span></li>
+        <li><kbd>T</kbd> <span>tik mee op de beat (tempo gelijkzetten), <kbd>X</kbd> drop nu</span></li>
+        <li><kbd>V</kbd> <span>door zijn ogen of erachter</span> <kbd>M</kbd> <span>kaart</span> <kbd>Esc</kbd> <span>pauze</span></li>
+      </ul>
+      <ul class="uitleg aanraak">
+        <li><span class="duim">links</span> <span>sleep om te wandelen</span></li>
+        <li><span class="duim">rechts</span> <span>sleep om rond te kijken, dubbeltik om te springen</span></li>
+        <li><span class="duim">Tik</span> <span>tik mee op de beat, <span class="duim">Dans</span> dansen</span></li>
+      </ul>
+      <button id="wandel" class="knop" type="button" disabled>Laden&hellip;</button>
+      <div class="extra" role="group" aria-label="Muziek en instellingen">
+        <button id="muziekKnop" class="knop-klein" type="button" aria-controls="muziek" aria-expanded="false">Muziek</button>
+        <button id="micKnop" class="knop-klein" type="button" aria-pressed="false">Laat de wereld meeluisteren</button>
+        <button id="kwaliteitKnop" class="knop-klein" type="button">Beeld: hoog</button>
+      </div>
+      <p class="noot">Zet de muziek op via je luidsprekers en laat de wereld meeluisteren: dan danst
+        het feest op jouw beat. Zonder microfoon tikt het feest zelf, op 142 BPM.</p>
+      <p id="voortgang" class="voortgang" role="status" aria-live="polite"></p>
+    </div>
+  </main>
+
+  <aside id="muziek" class="muziek dicht verborgen" aria-label="Muziek">
+    <button id="muziekKop" class="muziek-kop" type="button" aria-expanded="false">Muziek <span aria-hidden="true">&#9662;</span></button>
+    <div class="muziek-inhoud">
+      <iframe id="spotify" title="Spotify-speler met het album"
+        data-src="https://open.spotify.com/embed/album/44TN3JC95d7tY2MHL3USay?utm_source=generator&amp;theme=0"
+        width="100%" height="352" frameborder="0"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+      <p class="noot">Zonder Spotify-login hoor je fragmenten van 30 seconden.
+        Laat het via je luidsprekers spelen, niet via een koptelefoon, als de wereld mag meeluisteren.</p>
+    </div>
+  </aside>
+
+  <div id="hud" class="hud" hidden>
+    <div id="ritmeLamp" class="ritme" role="status" aria-live="off" title="Waar de beat vandaan komt">
+      <span class="lampje" aria-hidden="true"></span><span id="ritmeTekst">tempo &middot; 142 BPM</span>
+    </div>
+    <button id="tikKnop" class="rond-knop aanraak-knop" type="button">Tik</button>
+    <button id="dansKnop" class="rond-knop aanraak-knop" type="button">Dans</button>
+  </div>
+  <button id="pauze" class="pauze" type="button" aria-label="Pauze" hidden>&#10074;&#10074;</button>
+  <button id="zicht" class="zicht" type="button" hidden>Door zijn ogen</button>
+  <canvas id="kaart" class="kaart" width="180" height="180" aria-label="Kaart van het feest" hidden></canvas>
+  <div id="stok" class="stok" aria-hidden="true"><div class="knop-stok"></div></div>
+  <div id="vizier" class="vizier" aria-hidden="true" hidden></div>
+
+  <script type="module" src="wandel.js"></script>
+</body>
+</html>
