@@ -68,8 +68,8 @@ const lucht = maakLucht(camera);
 scene.add(lucht.mesh);
 
 // zwak maanlicht en hemellicht; de rest komt van het feest zelf
-scene.add(new THREE.HemisphereLight('#2a3578', '#0d0a08', 0.9));
-const maan = new THREE.DirectionalLight('#9fb4ff', 0.5);
+scene.add(new THREE.HemisphereLight('#2a3578', '#1a1410', 1.5));
+const maan = new THREE.DirectionalLight('#9fb4ff', 0.85);
 maan.position.copy(MAAN_RICHTING).multiplyScalar(100);
 scene.add(maan, maan.target);
 

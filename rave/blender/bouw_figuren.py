@@ -56,6 +56,7 @@ ANIMATIES = [
     ('house_3', 'house_3.fbx', 'lus'),
     ('backflip', 'backflip.fbx', 'eenmalig'),
 ]
+DECIMEREN = 0.3       # fractie van de driehoeken die overblijft (silhouetten in het donker)
 HOOGTE = 1.75          # m, kruin
 FPS = 30
 BPM = 142.0
@@ -541,6 +542,16 @@ def importeer_personage(naam, bestand, col):
     for mod in lijf.modifiers:
         if mod.type == 'ARMATURE':
             mod.object = arm
+    # minder driehoeken: 60 dansers in het halfduister hebben geen 39k driehoeken elk nodig
+    if DECIMEREN < 1.0:
+        voor = sum(len(p.vertices) - 2 for p in lijf.data.polygons)
+        dec = lijf.modifiers.new('decimeren', 'DECIMATE')
+        dec.ratio = DECIMEREN
+        with bpy.context.temp_override(object=lijf, active_object=lijf):
+            bpy.ops.object.modifier_move_to_index(modifier=dec.name, index=0)
+            bpy.ops.object.modifier_apply(modifier=dec.name)
+        na = sum(len(p.vertices) - 2 for p in lijf.data.polygons)
+        print(f'  decimeren: {voor} -> {na} driehoeken')
     arm.name = arm.data.name = f'danser_{naam}'
     arm.data.pose_position = 'POSE'
     arm.data.display_type = 'STICK'
