@@ -30,7 +30,7 @@ const el = {
   doek: $('doek'), intro: $('intro'), wandel: $('wandel'), voortgang: $('voortgang'),
   pauze: $('pauze'), kaart: $('kaart'), stok: $('stok'), vizier: $('vizier'), zicht: $('zicht'),
   hud: $('hud'), lamp: $('ritmeLamp'), lampTekst: $('ritmeTekst'), tikKnop: $('tikKnop'), dansKnop: $('dansKnop'),
-  melding: $('melding'), muziek: $('muziek'), muziekKop: $('muziekKop'), muziekKnop: $('muziekKnop'), spotify: $('spotify'),
+  melding: $('melding'), padHint: $('padHint'), padKnop: $('padKnop'), muziek: $('muziek'), muziekKop: $('muziekKop'), muziekKnop: $('muziekKnop'), spotify: $('spotify'),
   micKnop: $('micKnop'), kwaliteitKnop: $('kwaliteitKnop')
 };
 const params = new URLSearchParams(location.search);
@@ -565,12 +565,23 @@ function melding(tekst) {
 function korteNaam(id) {
   return id.replace(/\s*\(.*$/, '').trim() || 'controller';
 }
+const PAD_HINT = el.padHint.textContent;
+function zetPadUitleg(toon) {
+  document.documentElement.classList.toggle('toon-pad', toon);
+  el.padKnop.setAttribute('aria-pressed', String(toon));
+  el.padKnop.textContent = toon ? 'Toetsenbord' : 'Controller';
+}
+el.padKnop.addEventListener('click', () => zetPadUitleg(!document.documentElement.classList.contains('toon-pad')));
 pad.onVerbonden = (naam) => {
   document.documentElement.classList.add('heeft-pad');
+  el.padHint.textContent = `\u{1F3AE} Controller verbonden: ${korteNaam(naam)}. Druk op Start of A om te beginnen.`;
+  zetPadUitleg(true);
   melding(`Controller verbonden: ${korteNaam(naam)}`);
 };
 pad.onVerbroken = () => {
   document.documentElement.classList.remove('heeft-pad');
+  el.padHint.textContent = PAD_HINT;
+  zetPadUitleg(false);
   melding('Controller losgekoppeld');
 };
 const PAD_KIJK = 2.6;        // rad/s bij volle uitslag

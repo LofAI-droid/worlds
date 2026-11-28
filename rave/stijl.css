@@ -92,6 +92,11 @@ kbd, .duim {
 .pad { display: none; }
 .heeft-pad .pad { display: grid; }
 .heeft-pad .toetsen, .heeft-pad .aanraak { display: none; }
+.toon-pad .pad { display: grid; }
+.toon-pad .toetsen, .toon-pad .aanraak { display: none; }
+.pad-hint { margin: -10px 0 18px; font-size: 0.85rem; color: var(--zacht); text-align: left; }
+.heeft-pad .pad-hint { color: var(--tekst); }
+.is-aanraak:not(.heeft-pad) .pad-hint, .is-aanraak:not(.heeft-pad) #padKnop { display: none; }
 
 .melding {
   position: fixed;
