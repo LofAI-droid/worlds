@@ -736,7 +736,7 @@ def bouw_podium(col, ac):
     for k, x in enumerate((-5.0, 0.0, 5.0)):
         anker(ac, f'licht_rook_{k + 1}', (x, y0 - 1.0, 0.2), (x, y0 - 3.0, 1.0), '#c8d0ff')
     # dj en podiumdanser
-    dansers.append((0.0, dy + 0.75, kop(0, -1), 'podium', H))
+    dansers.append((0.0, dy + 0.95, kop(0, -1), 'podium', H))
     dansers.append((-5.0, y0 + 2.0, kop(0.2, -1), 'podium', H))
 
 
@@ -1073,7 +1073,8 @@ def bouw_kraam(col, ac):
         q = M @ Vector((x, y, 0))
         for sx in (-0.4, 0.4):
             qq = M @ Vector((x + sx, y, 0))
-            zitplaatsen.append((qq.x, qq.y, 0.46, kop(-(M.to_3x3() @ Vector((0, 1, 0))).x * -1, (M.to_3x3() @ Vector((0, 1, 0))).y)))
+            naar_kraam = M.to_3x3() @ Vector((0, 1, 0))
+            zitplaatsen.append((qq.x, qq.y, 0.46, kop(naar_kraam.x, naar_kraam.y)))
         rondjes.append((q.x, q.y, 0.5, 0.45))
     q = M @ Vector((0, 0.3, 0))
     dansers.append((q.x, q.y, kop(*(M.to_3x3() @ Vector((0, -1, 0))).xy), 'chill', 0.0))
@@ -1367,7 +1368,20 @@ def maak_wereld():
     add.inputs['Factor'].default_value = 1.0
     nt.links.new(ramp.outputs['Color'], add.inputs['A'])
     nt.links.new(mul.outputs[0], add.inputs['B'])
-    nt.links.new(add.outputs['Result'], bg.inputs['Color'])
+    # de camera ziet de lucht; als licht (op grond en mist) telt ze maar voor een fractie
+    lp = nt.nodes.new('ShaderNodeLightPath')
+    zw = nt.nodes.new('ShaderNodeMix')
+    zw.data_type = 'RGBA'
+    zw.blend_type = 'MULTIPLY'
+    zw.inputs['Factor'].default_value = 1.0
+    zw.inputs['B'].default_value = (0.12, 0.12, 0.12, 1)
+    nt.links.new(add.outputs['Result'], zw.inputs['A'])
+    kies = nt.nodes.new('ShaderNodeMix')
+    kies.data_type = 'RGBA'
+    nt.links.new(lp.outputs['Is Camera Ray'], kies.inputs['Factor'])
+    nt.links.new(zw.outputs['Result'], kies.inputs['A'])
+    nt.links.new(add.outputs['Result'], kies.inputs['B'])
+    nt.links.new(kies.outputs['Result'], bg.inputs['Color'])
     bg.inputs['Strength'].default_value = 1.0
 
 
@@ -1403,7 +1417,7 @@ def renderlicht(col):
             d = (doel - Vector(pos)).normalized()
             lamp('R_' + naam, 'SPOT', pos, d, kleur, 50000, hoek=4.5, straal=0.05)
         elif naam.startswith('licht_blinder'):
-            lamp('R_' + naam, 'SPOT', pos, d, kleur, 8000, hoek=40, straal=0.3)
+            lamp('R_' + naam, 'SPOT', pos, d, kleur, 2500, hoek=28, straal=0.3)
         elif naam.startswith('licht_laser'):
             for k in range(5):
                 dd = (Matrix.Rotation(math.radians(-14 + 7 * k), 3, 'Z') @ d)
@@ -1441,7 +1455,7 @@ def renderlicht(col):
             nt.nodes.remove(n_)
     out = nt.nodes['Material Output']
     vol = nt.nodes.new('ShaderNodeVolumePrincipled')
-    vol.inputs['Color'].default_value = (0.8, 0.82, 0.9, 1)
+    vol.inputs['Color'].default_value = (0.5, 0.52, 0.58, 1)
     vol.inputs['Anisotropy'].default_value = 0.7
     geo = nt.nodes.new('ShaderNodeNewGeometry')
     sep = nt.nodes.new('ShaderNodeSeparateXYZ')
@@ -1462,14 +1476,61 @@ def renderlicht(col):
     nt.links.new(ns.outputs['Fac'], mm.inputs[1])
     sc_ = nt.nodes.new('ShaderNodeMath')
     sc_.operation = 'MULTIPLY_ADD'
-    sc_.inputs[1].default_value = 0.10
-    sc_.inputs[2].default_value = 0.0025
+    sc_.inputs[1].default_value = 0.075
+    sc_.inputs[2].default_value = 0.002
     nt.links.new(mm.outputs[0], sc_.inputs[0])
-    nt.links.new(sc_.outputs[0], vol.inputs['Density'])
+    fm = nt.nodes.new('ShaderNodeMath')
+    fm.name = 'mistfactor'
+    fm.operation = 'MULTIPLY'
+    fm.inputs[1].default_value = 1.0
+    nt.links.new(sc_.outputs[0], fm.inputs[0])
+    nt.links.new(fm.outputs[0], vol.inputs['Density'])
     nt.links.new(vol.outputs[0], out.inputs['Volume'])
     me.materials.append(m)
     o = bpy.data.objects.new('R_mist', me)
     col.objects.link(o)
+    # rookwolken bij de rookmachines (licht_rook_*): dichtere, plaatselijke volumes
+    rm = bpy.data.materials.new('R_rook')
+    rm.use_nodes = True
+    nt = rm.node_tree
+    for n_ in list(nt.nodes):
+        if n_.type == 'BSDF_PRINCIPLED':
+            nt.nodes.remove(n_)
+    vol = nt.nodes.new('ShaderNodeVolumePrincipled')
+    vol.inputs['Color'].default_value = (0.85, 0.85, 0.9, 1)
+    vol.inputs['Anisotropy'].default_value = 0.6
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    ns = nt.nodes.new('ShaderNodeTexNoise')
+    ns.inputs['Scale'].default_value = 1.4
+    ns.inputs['Detail'].default_value = 4
+    nt.links.new(tc.outputs['Object'], ns.inputs['Vector'])
+    gr = nt.nodes.new('ShaderNodeTexGradient')
+    gr.gradient_type = 'SPHERICAL'
+    nt.links.new(tc.outputs['Object'], gr.inputs['Vector'])
+    mm = nt.nodes.new('ShaderNodeMath')
+    mm.operation = 'MULTIPLY'
+    nt.links.new(ns.outputs['Fac'], mm.inputs[0])
+    nt.links.new(gr.outputs['Fac'], mm.inputs[1])
+    m2 = nt.nodes.new('ShaderNodeMath')
+    m2.operation = 'MULTIPLY'
+    m2.inputs[1].default_value = 0.12
+    nt.links.new(mm.outputs[0], m2.inputs[0])
+    nt.links.new(m2.outputs[0], vol.inputs['Density'])
+    nt.links.new(vol.outputs[0], nt.nodes['Material Output'].inputs['Volume'])
+    import bmesh
+    for naam, pos, d, kleur, extra in ankers:
+        if not naam.startswith('licht_rook'):
+            continue
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=2, radius=1.0)
+        me = bpy.data.meshes.new('R_' + naam)
+        bm.to_mesh(me)
+        bm.free()
+        me.materials.append(rm)
+        o = bpy.data.objects.new('R_' + naam, me)
+        o.location = (pos[0], pos[1], 1.2)
+        o.scale = (4.5, 4.5, 2.6)
+        col.objects.link(o)
 
 
 def figuranten(col):
@@ -1574,11 +1635,13 @@ def render(alleen=(), snel=False, mist=True):
     except TypeError:
         pass
     sc.view_settings.exposure = 0.0
-    beelden = [('totaal', (0, -30, 1.7), (0, 20, 5.0), 30),
-               ('boom', (-1.0, -15.0, 1.7), (-19, 6, 6.0), 22),
-               ('chill', (13.5, -12.5, 1.6), (24.5, -5.5, 1.3), 28),
-               ('vuur', (-20.0, -28.5, 1.5), (-12.5, -20.5, 0.9), 30)]
-    for naam, pos, doel, lens in beelden:
+    beelden = [('totaal', (0, -30, 1.7), (0, 20, 5.0), 30, 1.0),
+               ('boom', (-1.0, -15.0, 1.7), (-19, 6, 6.0), 22, 0.8),
+               ('chill', (13.5, -12.5, 1.6), (24.5, -5.5, 1.3), 28, 0.3),
+               ('vuur', (-20.0, -28.5, 1.5), (-12.5, -20.5, 0.9), 30, 0.45)]
+    for naam, pos, doel, lens, mistf in beelden:
+        if mist:
+            bpy.data.materials['R_mist'].node_tree.nodes['mistfactor'].inputs[1].default_value = mistf
         if alleen and naam not in alleen:
             continue
         cam_d.lens = lens

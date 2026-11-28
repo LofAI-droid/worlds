@@ -74,6 +74,46 @@ een vleugje zuurgroen, op bijna zwart/nachtblauw.
 - `dansers`: ~60 plaatsen. ~40 op de dansvloer (dichter naar het podium toe), 2 op het podium
   (DJ + danser), rest verspreid bij chill-out, vuur en bosrand. `h` = kijkrichting (vloer: naar podium).
 
+### Stand van het terrein (door terrein ingevuld)
+- Bouw: `python3.11 blender/bouw_rave.py` (+ `-- --render [totaal|boom|chill|vuur]`), helpers in
+  `blender/natuur.py` (downloads, PBR-materialen, buizen, vertakte bomen, bladkaarten, rotsen, doeken).
+  Texturen: echte CC0-texturen van **Poly Haven** (1k-JPG, ruw in `blender/bronnen/polyhaven/`,
+  verkleind in `blender/texturen/`); het script downloadt ze alleen als ze ontbreken. Bladeren =
+  Poly Haven `jacaranda_tree`-veren (diffuus + alfa samengevoegd tot `blad_jacaranda.png`).
+  Zelfgemaakt: de UV-prints van de doeken en het LED-scherm, de vlam, de kelimpatronen (× echt jute).
+- **Afwijkingen / aanvullingen op het contract:**
+  - Ankers: lokale −Z in Blender wordt in three.js lokale **−Y** van de node. Elke `licht_*` heeft
+    daarom ook `extras.richting` = schijnrichting in three.js-wereldcoördinaten, naast `extras.kleur`.
+  - Extra ankertypes: `licht_muur_1..3` (strijklicht vanaf de voet van de ruïne, schuin omhoog langs
+    de muur) en `licht_warm_1..4` (warm puntlicht: 3 onder het chill-outdoek, 1 bij de chai-kraam).
+  - Extra gloedmaterialen binnen de groepen: `gloed_scherm_blauw` (schermpjes van de spelers op de
+    DJ-tafel), `gloed_vuur_sintel` (gloeiende kooltjes), `gloed_podium_wit` (lenzen van de moving
+    heads), `gloed_podium_warm` (blindercellen), `gloed_doek_uv|magenta|cyaan` en `gloed_scherm` hebben
+    een **emissieve textuur** (print/visual, emissiveFactor wit), `gloed_vuur` heeft een vlamtextuur met
+    alfa (alphaMode BLEND). Overige gloed-materialen: effen emissiekleur, sterkte 1.
+  - Bos: ring r 42.5–62 met 170 vertakte bomen (4 varianten, ~1–1.4k driehoeken), r 62–140 met 500
+    goedkope bomen (2 varianten, 350 driehoeken), plus varens en stenen. Hergebruikte meshes staan als
+    **EXT_mesh_gpu_instancing** in de glb (three.js GLTFLoader maakt er `InstancedMesh` van).
+  - De grond heeft vertexkleuren (`COLOR_0`, donkerder naar de bosrand) die de textuur vermenigvuldigen.
+  - Bladeren: alphaMode MASK (cutoff 0.5), dubbelzijdig.
+  - Ruïnemuur (schuin t.o.v. de assen) en de stretchtent (je kan erin) staan in `botsing.json` als
+    **rondjes** i.p.v. vakken: muur = rij rondjes r 0.5, tent = palen + lage doekhoeken achteraan.
+    Vakken: podium, twee luidsprekerstacks, chai-kraam.
+  - `dansers[]`: optioneel `y` (podium 1.2). `h` volgt Ministad: kijkt naar (−sin h, −cos h) in three.js
+    (h = 0 kijkt naar −z = naar het podium); een figuur die naar +z kijkt draai je dus `h + π`.
+    Eén `chill`-danser staat achter de toonbank van de chai-kraam (de verkoper).
+  - Reuzenboom: stam ~2.1 m dik met plankwortels, kroon 25 m breed, 18 m hoog; 6 uplights
+    (`licht_boom_1..6`, om en om magenta/oranje, om en om naar stam en kroon), `licht_rook_4/5` bij de voet.
+  - Doeken: links staat de reuzenboom (geen spanner); boven het podium twee gekruiste zeilen, rechts
+    een lange spanner naar twee palen, vooraan twee smalle 'vingers' naar palen op (±9.5, z 14.8).
+- Lichtankers (42): `licht_spot_1..10` (8 aan de voorste truss, 2 achteraan), `licht_laser_1..8`
+  (4 op de podiumrand, 2 bovenop de voorste torens, 2 aan de middenligger), `licht_blinder_1..4`,
+  `licht_boom_1..6`, `licht_vuur`, `licht_rook_1..6` (1–3 voor het podium, 4–5 boom, 6 vuur),
+  `licht_muur_1..3`, `licht_warm_1..4`.
+- Voorbeeldrenders (`blender/voorbeeld-totaal|boom|chill|vuur.png`) gebruiken echte Cycles-lampen,
+  een mistvolume, rookwolken en — als `figuren.glb` er is — de figuren op de danserplaatsen.
+  Niets daarvan zit in de glb.
+
 ## figuren.glb — gemaakt door `rave/blender/bouw_figuren.py`
 - Bron: Mixamo-FBX in `rave/blender/bronnen/mixamo/` (**nooit committen**, staat in .gitignore):
   `xbot.fbx` (personage + skelet), `house_1/2/3.fbx` (dansen, met huid), `backflip.fbx` (zonder huid).
