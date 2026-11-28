@@ -6,7 +6,7 @@ import { randLicht } from './licht.js';
 
 const CLIPS = ['house_1', 'house_2', 'house_3', 'backflip', 'staan', 'wiegen'];
 const HOUSE = ['house_1', 'house_2', 'house_3'];
-const CLIP_BPM = 125;              // aangenomen tempo van de Mixamo-dansjes (schaal ten opzichte hiervan)
+const CLIP_BPM = 125;              // aangenomen tempo van de Mixamo-house-dansjes (niet gemeten)
 const GLOW_KLEUREN = ['#22e6ff', '#ff2fd0', '#9dff2a', '#ff8a1a', '#b44dff'];
 const BOTTEN = { hand: /RightHand$/, nek: /Neck$/, hoofd: /Head$/ };
 const ACC = { glowstick: 'hand', halsband: 'nek', koptelefoon: 'hoofd', masker: 'hoofd' };
@@ -68,10 +68,8 @@ export class FigurenBron {
         // extras van figuren.glb: positie (m) en rotatie (quaternion x,y,z,w of euler) in het assenstelsel van het bot
         const rot = a.userData.rotatie || [0, 0, 0, 1];
         const q = rot.length === 4 ? new THREE.Quaternion(...rot) : new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot));
-        const lok = new THREE.Matrix4().compose(new THREE.Vector3(...off), q.normalize(), new THREE.Vector3(1, 1, 1));
-        const s = new THREE.Vector3().setFromMatrixScale(botW);
-        lok.scale(new THREE.Vector3(1 / s.x, 1 / s.y, 1 / s.z));
-        this.accLokaal[soort] = lok;
+        // afspraak: bot.add(acc); acc.position.fromArray(positie); acc.quaternion.fromArray(rotatie)
+        this.accLokaal[soort] = new THREE.Matrix4().compose(new THREE.Vector3(...off), q.normalize(), a.scale.clone());
         continue;
       }
       if (Math.hypot(p.x, p.z) < 1.2 && p.y > 0.2 && p.y < 2.2) {
@@ -87,7 +85,8 @@ export class FigurenBron {
     this.clips = {};
     for (const c of gltf.animations) {
       const naam = CLIPS.find((n) => c.name === n || c.name.endsWith('|' + n) || c.name.endsWith('_' + n) && c.name.length < n.length + 14) || c.name;
-      this.clips[naam] = this.zonderWortelbeweging(c, proto);
+      // wortelbeweging is al in Blender weggefilterd (heupwiegen blijft): clip ongewijzigd gebruiken
+      this.clips[naam] = c;
     }
     this.proto = proto;
     const info = node.userData || {};
@@ -122,29 +121,6 @@ export class FigurenBron {
       m.name = 'gloed_glowstick';
       return m;
     });
-  }
-
-  zonderWortelbeweging(clip, proto) {
-    const c = clip.clone();
-    for (const tr of c.tracks) {
-      if (!/Hips\.position$/.test(tr.name)) continue;
-      const botNaam = tr.name.replace(/\.position$/, '');
-      const bot = proto.getObjectByName(botNaam);
-      // welke lokale as is 'omhoog' voor de heup?
-      let as = 1;
-      if (bot && bot.parent) {
-        const q = bot.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
-        const op = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-        const a = [Math.abs(op.x), Math.abs(op.y), Math.abs(op.z)];
-        as = a.indexOf(Math.max(...a));
-      }
-      const v = tr.values;
-      const v0 = [v[0], v[1], v[2]];
-      for (let i = 0; i < v.length; i += 3) {
-        for (let k = 0; k < 3; k++) if (k !== as) v[i + k] = v0[k];
-      }
-    }
-    return c;
   }
 
   /** Eén figuur: { obj, mixer, acties, speel(naam) }. */
@@ -246,6 +222,9 @@ export class Dansers {
       this.lijst.push(f);
       i++;
     }
+    for (const f of this.lijst) {
+      f.ruimte = Math.min(9, ...this.lijst.filter((g) => g !== f).map((g) => g.obj.position.distanceTo(f.obj.position)));
+    }
     this.botsersLijst = this.lijst.map((f) => ({ x: f.obj.position.x, z: f.obj.position.z, r: 0.32, y: f.obj.position.y }));
   }
 
@@ -263,6 +242,12 @@ export class Dansers {
     return Math.random() < 0.7 ? 'wiegen' : 'staan';
   }
 
+  /** Nieuwe clip kiezen; `wiegen` start in de maat (16 beats per lus, beat op t = 0). */
+  wissel(f, ritme, overgang) {
+    const naam = this.keuze(f, ritme.fase);
+    f.speel(naam, overgang, naam === 'wiegen' ? ((ritme.tel % 16) + ritme.beatFase) / 16 : null);
+  }
+
   zetKwaliteit(k) { this.kwaliteit = k; }
 
   botsers() { return this.botsersLijst; }
@@ -276,14 +261,15 @@ export class Dansers {
       this.vorigeFase = ritme.fase;
     }
     const tempo = klem(ritme.bpm / CLIP_BPM, 0.88, 1.2);
-    const rustig = klem(ritme.bpm / this.bron.wiegenBpm, 0.85, 1.15);
+    const wiegen = klem(ritme.bpm / this.bron.wiegenBpm, 0.5, 1.5);     // 16 beats per lus, beat op t = 0
 
     // af en toe een backflip in de drop
     this.flipKlok -= dt;
     if (ritme.fase === 'drop' && this.flipKlok < 0) {
       this.flipKlok = 6 + Math.random() * 9;
+      // de backflip zwaait de heup ±0.5 m: alleen wie genoeg ruimte rond zich heeft
       const kandidaten = this.lijst.filter((f) => f.zone === 'vloer' && f.zichtbaar && f.huidigNaam !== 'backflip' &&
-        f.obj.position.distanceTo(camera.position) < 28);
+        f.ruimte > 1.1 && f.obj.position.distanceTo(camera.position) < 28);
       const f = kandidaten[Math.floor(Math.random() * kandidaten.length)];
       if (f && f.acties.backflip) f.speel('backflip', 0.2);
     }
@@ -294,12 +280,12 @@ export class Dansers {
     for (const f of this.lijst) {
       if (f.wacht > 0) {
         f.wacht -= dt;
-        if (f.wacht <= 0) f.speel(this.keuze(f, ritme.fase), ritme.fase === 'drop' ? 0.3 : 0.8);
+        if (f.wacht <= 0) this.wissel(f, ritme, ritme.fase === 'drop' ? 0.3 : 0.8);
       }
       f.wissel -= dt;
       if (f.wissel < 0) {
         f.wissel = 10 + Math.random() * 16;
-        if (f.huidigNaam !== 'backflip') f.speel(this.keuze(f, ritme.fase), 0.9);
+        if (f.huidigNaam !== 'backflip') this.wissel(f, ritme, 0.9);
       }
       this.bol.center.set(f.obj.position.x, f.obj.position.y + 0.9, f.obj.position.z);
       const dCam = this.bol.center.distanceTo(cam);
@@ -312,7 +298,7 @@ export class Dansers {
       const interval = d < 14 ? 0 : d < 30 ? (licht ? 1 / 15 : 1 / 30) : (licht ? 1 / 6 : 1 / 12);
       if (f.opgeteld < interval) continue;
       const n = f.huidigNaam;
-      f.mixer.timeScale = n === 'backflip' ? 1 : HOUSE.includes(n) ? tempo : rustig;
+      f.mixer.timeScale = n === 'wiegen' ? wiegen : HOUSE.includes(n) ? tempo : 1;
       f.mixer.update(f.opgeteld);
       f.opgeteld = 0;
     }

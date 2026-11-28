@@ -707,7 +707,8 @@ function stap(dt) {
     m.speel(clip, 0.35);
   }
   const bpmSchaal = Math.max(0.88, Math.min(1.2, ritme.bpm / 125));
-  m.mixer.timeScale = m.huidigNaam === 'lopen' ? snelheid / WANDEL : m.huidigNaam?.startsWith('house') ? bpmSchaal : 1;
+  m.mixer.timeScale = m.huidigNaam === 'lopen' ? snelheid / WANDEL : m.huidigNaam?.startsWith('house') ? bpmSchaal
+    : m.huidigNaam === 'wiegen' ? Math.max(0.5, Math.min(1.5, ritme.bpm / (dansers.bron.wiegenBpm || 141.87))) : 1;
   m.mixer.update(dt);
   if (!m.acties.lopen && !flip && (beweegt || !speler.opGrond)) {
     const rennen = snelheid > 3.4;

@@ -105,19 +105,19 @@ def bewaar_rgba(naam, rgba, jpg=False):
 
 
 def bladatlas():
-    """Jacaranda-bladveren (Poly Haven, CC0) met alfakanaal in één PNG van 512 px."""
+    """Jacaranda-bladveren (Poly Haven, CC0) met alfakanaal in één PNG van 1024 px."""
     doel = 'blad_jacaranda.png'
     if not os.path.exists(os.path.join(TEX, doel)):
         d = bpy.data.images.load(ph_bron('jacaranda_tree', 'leaves_diff', 'Models'))
         a = bpy.data.images.load(ph_bron('jacaranda_tree', 'leaves_alpha', 'Models'))
-        d.scale(512, 512)
-        a.scale(512, 512)
+        d.scale(1024, 1024)
+        a.scale(1024, 1024)
         pd, pa = _pixels(d), _pixels(a)
         rgba = pd.copy()
         rgba[..., 3] = np.clip((pa[..., 0] - 0.35) * 3.0, 0, 1)
         # groener en iets donkerder: nachtbos
         rgba[..., :3] *= np.array([0.80, 0.95, 0.80], dtype=np.float32)
-        img = bpy.data.images.new('blad_jacaranda', 512, 512, alpha=True)
+        img = bpy.data.images.new('blad_jacaranda', 1024, 1024, alpha=True)
         img.pixels.foreach_set(rgba.ravel())
         img.filepath_raw = os.path.join(TEX, doel)
         img.file_format = 'PNG'

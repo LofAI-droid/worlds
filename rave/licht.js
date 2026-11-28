@@ -137,7 +137,7 @@ function kegelMateriaal(kleur) {
         float grond = smoothstep(0.0, 1.4, vW.y);
         float laag = mix(1.2, 0.55, smoothstep(1.5, 12.0, vW.y));
         float mist = 0.45 + 0.75 * rMist(vW, tijd);
-        float dichtbij = smoothstep(0.4, 3.0, afst);
+        float dichtbij = smoothstep(1.0, 7.0, afst);   // geen roze muur als je in de straal staat
         float ver = exp(-afst * 0.01);
         float a = rand * lengte * grond * laag * mist * dichtbij * ver * sterkte;
         gl_FragColor = vec4(kleur * a, 1.0);

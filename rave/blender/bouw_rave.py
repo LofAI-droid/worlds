@@ -169,18 +169,18 @@ def maak_materialen():
     T = N.ph_tex
     # grond
     pbr('grond_vloer', T('brown_mud_dry', 'diff', 1024, bewerk=_tint((0.85, 0.78, 0.7))),
-        T('brown_mud_dry', 'nor_gl', 512), ruwheid=0.95, puntkleur=True)
-    pbr('grond_gras', T('sparse_grass', 'diff', 1024, bewerk=_tint((0.75, 0.8, 0.7))),
-        T('sparse_grass', 'nor_gl', 512), ruwheid=0.95, puntkleur=True)
+        T('brown_mud_dry', 'nor_gl', 1024), ruwheid=0.95, puntkleur=True)
+    pbr('grond_gras', T('sparse_grass', 'diff', 1024, bewerk=_tint((0.55, 0.6, 0.5))),
+        T('sparse_grass', 'nor_gl', 1024), ruwheid=0.95, puntkleur=True)
     pbr('grond_bos', T('leaves_forest_ground', 'diff', 1024, bewerk=_tint((0.7, 0.66, 0.6))),
-        T('leaves_forest_ground', 'nor_gl', 512), ruwheid=0.9, puntkleur=True)
+        T('leaves_forest_ground', 'nor_gl', 1024), ruwheid=0.9, puntkleur=True)
     # natuur
-    pbr('schors', T('bark_brown_02', 'diff', 512, bewerk=_tint((0.8, 0.78, 0.75))),
+    pbr('schors', T('bark_brown_02', 'diff', 1024, bewerk=_tint((0.8, 0.78, 0.75))),
         T('bark_brown_02', 'nor_gl', 512), ruwheid=0.95)
-    pbr('schors_reus', T('bark_platanus', 'diff', 1024), T('bark_platanus', 'nor_gl', 512), ruwheid=0.9, normaal=1.5)
+    pbr('schors_reus', T('bark_platanus', 'diff', 1024), T('bark_platanus', 'nor_gl', 1024), ruwheid=0.9, normaal=1.5)
     N.blad_mat('blad', N.bladatlas())
     pbr('rots', T('lichen_rock', 'diff', 512), T('lichen_rock', 'nor_gl', 512), ruwheid=0.9)
-    pbr('steen_muur', T('mossy_stone_wall', 'diff', 1024), T('mossy_stone_wall', 'nor_gl', 512),
+    pbr('steen_muur', T('mossy_stone_wall', 'diff', 1024), T('mossy_stone_wall', 'nor_gl', 1024),
         ruwheid=0.92, normaal=1.6)
     pbr('stamsnede', kleur='#5a3d26', ruwheid=0.9)
     pbr('houtskool', kleur='#141110', ruwheid=1.0)
@@ -334,7 +334,7 @@ def bouw_grond(col):
 #  Bos
 # =====================================================================
 BOOMSOORTEN = {
-    'hoog': dict(hoogte=13.0, stam_r=0.36, seg=[6, 3, 2], zijden=[9, 6, 4], aantal=[6, 3],
+    'hoog': dict(hoogte=11.5, stam_r=0.36, seg=[6, 3, 2], zijden=[9, 6, 4], aantal=[6, 3],
                  vanaf=[0.5, 0.3], hoek=[(35, 60), (30, 55)], lengte=[(0.45, 0.6), (0.45, 0.65)],
                  dikte=[0.5, 0.55], eind=[0.35, 0.3, 0.25], buig=[0.08, 0.2, 0.3], tropisme=[0.02, 0.1, 0.05],
                  kaarten=9, kaart=(2.0, 3.0), tegel=1.5, knoest=0.08),
@@ -342,7 +342,7 @@ BOOMSOORTEN = {
                   vanaf=[0.4, 0.25], hoek=[(45, 70), (30, 60)], lengte=[(0.7, 0.9), (0.4, 0.6)],
                   dikte=[0.55, 0.55], eind=[0.4, 0.3, 0.25], buig=[0.1, 0.18, 0.3], tropisme=[0.02, 0.06, 0.02],
                   kaarten=9, kaart=(2.0, 3.0), tegel=1.5, knoest=0.1),
-    'slank': dict(hoogte=16.0, stam_r=0.28, seg=[7, 3, 2], zijden=[8, 5, 4], aantal=[6, 2],
+    'slank': dict(hoogte=13.5, stam_r=0.28, seg=[7, 3, 2], zijden=[8, 5, 4], aantal=[6, 2],
                   vanaf=[0.55, 0.3], hoek=[(30, 55), (25, 50)], lengte=[(0.3, 0.45), (0.5, 0.7)],
                   dikte=[0.45, 0.55], eind=[0.3, 0.3, 0.25], buig=[0.06, 0.2, 0.3], tropisme=[0.0, 0.12, 0.05],
                   kaarten=10, kaart=(1.8, 2.8), tegel=1.5, knoest=0.06),
@@ -426,6 +426,7 @@ def bouw_bos(col):
 
     dicht = verspreid(170, 42.5, 62, 4.6, bezet, extra=vrij)
     ver = verspreid(330, 62, 115, 6.0, bezet)
+    ver += verspreid(170, 115, 140, 7.5, bezet)
     per = {s: [] for s in meshes}
     for k, (x, y) in enumerate(dicht):
         s = soorten[k % 4]
@@ -492,7 +493,7 @@ def bouw_onderbegroei(col, bomen):
 # =====================================================================
 def bouw_reuzenboom(col, ac):
     c = collectie('Reuzenboom', col)
-    p = dict(hoogte=9.0, stam_r=1.25, seg=[5, 5, 3, 2], zijden=[16, 10, 6, 4], aantal=[6, 4, 3],
+    p = dict(hoogte=11.5, stam_r=2.0, seg=[5, 5, 3, 2], zijden=[16, 10, 6, 4], aantal=[6, 4, 3],
              vanaf=[0.55, 0.3, 0.3], hoek=[(48, 72), (25, 50), (25, 55)], lengte=[(1.3, 1.6), (0.55, 0.7), (0.45, 0.6)],
              dikte=[0.55, 0.5, 0.55], eind=[0.7, 0.45, 0.3, 0.25], buig=[0.05, 0.12, 0.2, 0.3],
              tropisme=[0.0, 0.04, 0.08, 0.05], kaarten=30, kaart=(3.0, 4.3), tegel=2.0, knoest=0.12,
@@ -504,21 +505,23 @@ def bouw_reuzenboom(col, ac):
     ys = [v.co.y for v in me_b.vertices]
     zs = [v.co.z for v in me_b.vertices]
     breed = max(max(xs) - min(xs), max(ys) - min(ys))
-    s = min(25.0 / breed, 18.0 / max(zs))
+    s = 25.0 / breed
+    sz = 18.0 / max(zs)
     for me in (me_s, me_b):
         o = bpy.data.objects.new(me.name, me)
         o.location = (BOOM[0], BOOM[1], 0)
-        o.scale = (s, s, s)
+        o.scale = (s, s, sz)
         o.rotation_euler = (0, 0, 0.6)
         c.objects.link(o)
     print(f'  reuzenboom: {gs.tris() + gb.tris()} driehoeken, schaal {s:.2f}, kroon {breed * s:.1f} m, '
-          f'hoogte {max(zs) * s:.1f} m')
-    rondjes.append((BOOM[0], BOOM[1], 1.25 * s * 1.3, 20.0))
+          f'hoogte {max(zs) * sz:.1f} m, stam {2 * 2.0 * s:.1f} m dik')
+    rondjes.append((BOOM[0], BOOM[1], 2.0 * s * 1.25, 20.0))
     # uplights: magenta en oranje aan de voet
-    for k in range(4):
-        a = 2 * math.pi * k / 4 + 0.4
-        q = (BOOM[0] + 3.2 * math.cos(a), BOOM[1] + 3.2 * math.sin(a), 0.15)
-        doel = (BOOM[0] + 1.0 * math.cos(a), BOOM[1] + 1.0 * math.sin(a), 12)
+    for k in range(6):
+        a = 2 * math.pi * k / 6 + 0.4
+        q = (BOOM[0] + 3.4 * math.cos(a), BOOM[1] + 3.4 * math.sin(a), 0.15)
+        uit = 7.0 if k % 2 else 0.6                    # om en om: kroon en stam
+        doel = (BOOM[0] + uit * math.cos(a), BOOM[1] + uit * math.sin(a), 11 if k % 2 else 7)
         anker(ac, f'licht_boom_{k + 1}', q, doel, '#ff2fd0' if k % 2 == 0 else '#ff7a1a')
         # het lampje zelf: een kleine schijnwerper op de grond
         g = Geo()
@@ -577,7 +580,6 @@ def blinder(g, pos, richting):
     z = x.cross(d)
     m = Matrix((x, z, -d)).transposed().to_4x4()
     m.translation = pos
-    rond_blok(g, (0, 0, 0), (0.42, 0.2, 0.08), 0.02, 'zwart_metaal', glad=False, kantel=None) if False else None
     kader = Geo()
     rond_blok(kader, (0, 0, 0), (0.42, 0.2, 0.08), 0.02, 'zwart_metaal', glad=False)
     for k in range(4):
@@ -826,41 +828,68 @@ def bouw_chill(col, ac):
     c = collectie('Chillout', col)
     cx, cy = CHILL
     g = Geo()
-    # laag tentdoek op palen
-    MID_H, RAND_H, R = 4.3, 2.3, 6.4
-    npaal = 6
-    a0 = 0.25
-    for k in range(npaal):
-        a = a0 + 2 * math.pi * k / npaal
-        x, y = cx + R * math.cos(a), cy + R * math.sin(a)
-        staaf(g, (x, y, 0), (x, y, RAND_H + 0.1), 0.05, 'bamboe', n=7, dop=True)
-        q = (cx + (R + 1.8) * math.cos(a), cy + (R + 1.8) * math.sin(a), 0.03)
-        staaf(g, (x, y, RAND_H + 0.05), q, 0.006, 'touw', n=3)
-        rondjes.append((x, y, 0.15, RAND_H))
-    staaf(g, (cx, cy, 0), (cx, cy, MID_H), 0.07, 'bamboe', n=8)
-    rondjes.append((cx, cy, 0.2, MID_H))
-    nr, na = 9, 48
+    # stretchtent: een gespannen doek over palen van verschillende hoogte, achteraan tot op de grond
+    voor_a = math.atan2(-cy, -cx)                      # richting dansvloer: daar is de tent open
+    stuur = [(0.0, 0.0, 4.4), (-2.3, 2.0, 3.3), (2.4, -1.9, 3.5)]
+    for x, y, h in stuur:
+        staaf(g, (cx + x, cy + y, 0), (cx + x, cy + y, h - 0.05), 0.06, 'bamboe', n=8)
+        rondjes.append((cx + x, cy + y, 0.18, h))
+    rand = []
+    for k in range(9):
+        a = voor_a + 2 * math.pi * k / 9
+        achter = math.cos(a - voor_a) < -0.35
+        rr = 7.6 if achter else 6.4
+        h = 0.12 if achter else (2.5 if k % 2 == 0 else 2.2)
+        x, y = rr * math.cos(a), rr * math.sin(a)
+        rand.append((a, rr, h, achter))
+        stuur.append((x, y, h))
+        if achter:
+            rond_blok(g, (cx + x, cy + y, 0.04), (0.06, 0.06, 0.06), 0.01, 'zwart_metaal', glad=False)
+            rondjes.append((cx + x * 0.93, cy + y * 0.93, 0.6, 0.6))
+        else:
+            staaf(g, (cx + x, cy + y, 0), (cx + x, cy + y, h + 0.08), 0.05, 'bamboe', n=7, dop=True)
+            q = (cx + (rr + 1.9) * math.cos(a), cy + (rr + 1.9) * math.sin(a), 0.03)
+            staaf(g, (cx + x, cy + y, h + 0.05), q, 0.006, 'touw', n=3)
+            rondjes.append((cx + x, cy + y, 0.15, h))
+
+    def rand_r(a):
+        # straal van de doekrand: tussen de hoekpunten trekt de rand naar binnen (holle randen)
+        for k in range(9):
+            a0_, r0, _, _ = rand[k]
+            a1_, r1, _, _ = rand[(k + 1) % 9]
+            d = (a - a0_) % (2 * math.pi)
+            if d <= 2 * math.pi / 9 + 1e-6:
+                t = d / (2 * math.pi / 9)
+                return (r0 * (1 - t) + r1 * t) - 0.9 * math.sin(math.pi * t)
+        return 6.5
+
+    def doekh(x, y):
+        som, w = 0.0, 0.0
+        for px, py, h in stuur:
+            d2 = (x - px) ** 2 + (y - py) ** 2
+            wi = 1 / (d2 ** 0.9 + 0.05)
+            som += wi * h
+            w += wi
+        return som / w
+
+    nr, na = 12, 72
     idx = []
     for i in range(nr + 1):
-        rr = R * 1.08 * i / nr
         rij = []
         for j in range(na):
             a = 2 * math.pi * j / na
-            rel = (a - a0) % (2 * math.pi / npaal) / (2 * math.pi / npaal)
-            zak_rand = 0.65 * math.sin(math.pi * rel) ** 1.2
-            t = rr / R
-            z = MID_H - (MID_H - RAND_H) * t ** 0.85 - zak_rand * t ** 3 - 0.15 * math.sin(math.pi * min(t, 1)) * math.sin(math.pi * rel)
-            if t > 1:
-                z -= (t - 1) * 3.0
-            rij.append(g.p((cx + rr * math.cos(a), cy + rr * math.sin(a), z)))
+            rr = rand_r(a) * i / nr
+            x, y = rr * math.cos(a), rr * math.sin(a)
+            z = doekh(x, y) - 0.08 * math.sin(math.pi * i / nr)
+            rij.append(g.p((cx + x, cy + y, z)))
         idx.append(rij)
+    V = g.v
     for i in range(nr):
         for j in range(na):
             j2 = (j + 1) % na
-            u0, u1 = j / na * 10, (j + 1) / na * 10
-            v0, v1 = i / nr * 3.5, (i + 1) / nr * 3.5
-            g.vlak([idx[i][j], idx[i][j2], idx[i + 1][j2], idx[i + 1][j]], 'tentdoek',
-                   [(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
+            q = [idx[i][j], idx[i][j2], idx[i + 1][j2], idx[i + 1][j]]
+            g.vlak(q, 'tentdoek', [(V[k][0] / 0.7, V[k][1] / 0.7) for k in q])
+    MID_H, RAND_H, R, a0 = 4.4, 2.3, 6.4, voor_a
     # tapijten
     for k, (dx, dy, rot, sx, sy, m) in enumerate([(0, 0, 0.2, 2.6, 1.7, 'tapijt_1'), (-2.2, 1.6, 1.1, 2.2, 1.4, 'tapijt_2'),
                                                   (2.0, -1.8, -0.5, 2.3, 1.5, 'tapijt_2'), (1.8, 2.4, 0.7, 2.0, 1.3, 'tapijt_1'),
@@ -896,13 +925,15 @@ def bouw_chill(col, ac):
                  [0.15, 0.15], kussens[(k + ring + 1) % 4], n=10, dop=True, tegel=0.6)
             zitplaatsen.append((x, y, 0.25, kop(cx - x, cy - y)))
     # lampions onder het tentdoek
-    for k in range(9):
-        a = a0 + 2 * math.pi * k / 9 + 0.3
-        rr = 2.2 + 2.3 * (k % 2)
-        x, y = cx + rr * math.cos(a), cy + rr * math.sin(a)
-        t = rr / R
-        z_doek = MID_H - (MID_H - RAND_H) * t ** 0.85 - 0.12
-        lampion(g, (x, y, z_doek - 0.55), 'gloed_lampion_rood' if k % 3 else 'gloed_lampion_warm', draad=0.55)
+    for k in range(12):
+        a = voor_a + 2 * math.pi * k / 12 + 0.2
+        rr = 1.6 + 1.6 * (k % 3)
+        x, y = rr * math.cos(a), rr * math.sin(a)
+        z_doek = doekh(x, y) - 0.1
+        if z_doek < 2.3:
+            continue
+        lampion(g, (cx + x, cy + y, z_doek - 0.6 - 0.25 * (k % 2)), 'gloed_lampion_rood' if k % 3 else 'gloed_lampion_warm',
+                draad=0.6 + 0.25 * (k % 2) - 0.1)
     g.object('chillout', c)
     for k, (dx, dy) in enumerate(((0, 0), (-2.5, -2.5), (2.5, 2.5))):
         anker(ac, f'licht_warm_{k + 1}', (cx + dx, cy + dy, 2.2), (cx + dx, cy + dy, 0), '#ff5a2a')
@@ -991,7 +1022,7 @@ def bouw_kraam(col, ac):
     rond_blok(g, (0, D - 0.25, 1.4), (W - 0.1, 0.18, 0.02), 0.01, 'hout', glad=False, tegel=1.5)
     # dak van saffraankleurig doek
     doek(g, [(-W - 0.3, -D - 0.5, 2.5), (W + 0.3, -D - 0.5, 2.5), (W + 0.3, D + 0.2, 2.2), (-W - 0.3, D + 0.2, 2.2)],
-         'kraamdoek', nu=12, nv=6, zak=0.15, golf=0.05, uvschaal=3)
+         'kraamdoek', nu=12, nv=6, zak=0.15, golf=0.05, uvschaal=7)
     # franje: plooien langs de voorkant
     rand = []
     for k in range(25):
@@ -1206,9 +1237,9 @@ def paddenstoel(g, pos, h, r, mat, scheef=(0, 0)):
     x, y, z = pos
     top = Vector((x + scheef[0], y + scheef[1], z + h))
     buis(g, [Vector((x, y, z)), Vector((x, y, z)).lerp(top, 0.5) + Vector((scheef[0] * 0.3, scheef[1] * 0.3, 0)), top],
-         [r * 0.28, r * 0.22, r * 0.2], mat, n=6)
-    prof = [(-0.05, 1.0), (0.0, 1.0), (0.25, 0.92), (0.55, 0.7), (0.85, 0.38), (1.0, 0.0)]
-    buis(g, [top + Vector((0, 0, r * 0.55 * dz)) for dz, _ in prof], [r * f + 0.002 for _, f in prof], mat, n=10)
+         [r * 0.28, r * 0.22, r * 0.2], mat, n=5)
+    prof = [(-0.05, 1.0), (0.0, 1.0), (0.4, 0.85), (0.8, 0.45), (1.0, 0.0)]
+    buis(g, [top + Vector((0, 0, r * 0.55 * dz)) for dz, _ in prof], [r * f + 0.002 for _, f in prof], mat, n=8)
 
 
 def bouw_paddenstoelen(col, bomen, werken):
@@ -1384,10 +1415,10 @@ def renderlicht(col):
         elif naam.startswith('licht_muur'):
             lamp('R_' + naam, 'SPOT', pos, d, kleur, 6000, hoek=70, straal=0.1)
         elif naam.startswith('licht_warm'):
-            lamp('R_' + naam, 'POINT', pos, d, kleur, 220, straal=0.3)
+            lamp('R_' + naam, 'POINT', pos, d, kleur, 700, straal=0.3)
     # zacht maanlicht van achter het podium: randlicht op het bos
     zon = bpy.data.lights.new('R_maan', 'SUN')
-    zon.energy = 0.45
+    zon.energy = 0.15
     zon.color = (0.55, 0.65, 1.0)
     zon.volume_factor = 0.0
     o = bpy.data.objects.new('R_maan', zon)
@@ -1544,7 +1575,7 @@ def render(alleen=(), snel=False, mist=True):
         pass
     sc.view_settings.exposure = 0.0
     beelden = [('totaal', (0, -30, 1.7), (0, 20, 5.0), 30),
-               ('boom', (-4.0, -13.0, 1.7), (-19, 6, 7.0), 24),
+               ('boom', (-1.0, -15.0, 1.7), (-19, 6, 6.0), 22),
                ('chill', (13.5, -12.5, 1.6), (24.5, -5.5, 1.3), 28),
                ('vuur', (-20.0, -28.5, 1.5), (-12.5, -20.5, 0.9), 30)]
     for naam, pos, doel, lens in beelden:

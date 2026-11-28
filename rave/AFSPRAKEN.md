@@ -135,6 +135,51 @@ een vleugje zuurgroen, op bijna zwart/nachtblauw.
   kicks + energie (opbouw/drop). Terugval: vast tempo 142 BPM + meetikken (toets `T`).
 - Gedeeld ritme-object `ritme`: `{ beat (0..1 puls), bpm, fase: 'basis'|'opbouw'|'drop', energie }`.
 
+### Stand van de viewer (door viewer ingevuld)
+- Modules: `wandel.js` (hoofdlus, laden, speler, botsing, camera, kaart, HUD), `lucht.js` (nachtlucht
+  met sterren/maan/melkweg + lage hoogtemist: FogExp2 via aangepaste `ShaderChunk`, dichter bij de
+  grond), `licht.js` (ankers → lampen/stralen/lasers/vuur/blinders/rook, `gloed_*`-sturing, randlicht
+  voor figuren), `ritme.js` (beat), `dansers.js` (`FigurenBron` + `Dansers`).
+- **Schijnrichting**: `extras.richting` (wereldrichting in three.js) heeft voorrang; zonder die extra
+  gebruikt de viewer de lokale **−Y** van de three.js-node (= Blender −Z na export met +Y omhoog). Getest.
+- Extra ankertypes die rave.glb levert en de viewer nu ondersteunt: `licht_warm_*` (PointLight,
+  bereik 9 m) en `licht_muur_*` (strijklicht: SpotLight + zwakke kegel). `licht_rook_*`-richting =
+  waairichting van de rook.
+- **Lampbudget** (echte three.js-lampen; de rest is enkel zichtbare kegels/gloed): hoog = 4 spots
+  (1 met schaduw, 1024²), 2 boom, 2 warm, 1 muur, 1 vuur, 1 blinderlamp + hemel + maan; licht = 2 spots
+  (geen schaduw), 1 boom, 1 warm, 1 vuur + hemel + maan.
+- Gloedgroepen: `led` (looplicht rond de vloer + beat), `scherm` (eigen psychedelische visuals in de
+  shader, 65% gemengd met de eigen kleur), `podium` (drop/opbouw-flits), `doek` (half), `stringart`/
+  `paddenstoel` (traag ademend), `lampion` (rustig), `vuur` (flakkert), `glowstick` (beat).
+  Onbekende groepen blijven op sterkte 1.
+- `dansers[].y` wordt gebruikt als hij er is; anders y = `podium.y` voor zone `podium`, 0 elders.
+  `h` volgt Ministad (kijkrichting (−sin h, −cos h)); figuur kijkt naar +z, dus `rotation.y = h + π`.
+- Figuren: clips ongewijzigd (geen eigen wortelfilter), `wiegen` met `timeScale = bpm / wiegen_bpm`
+  (uit extras van `danser_xbot`) en in de maat gestart; house-clips licht geschaald met bpm/125
+  (0.88–1.2, het tempo van de Mixamo-dansjes is niet gemeten). Backflip alleen voor vloerdansers met
+  > 1.1 m tot de dichtste buur. Accessoires volgens extras `bot`/`positie`/`rotatie`
+  (glowstick ~40%, halsband ~22%, koptelefoon ~15%, masker ~15%); glowstick/halsband krijgen per kloon
+  een kleur uit cyaan/magenta/zuurgroen/oranje/UV. 8 huidvarianten van `figuur_huid` (+ randlicht).
+- Speler = `danser_xbot` met glowstick: `staan`, `wiegen` (stilstaan op de vloer), `E` = dansen (house),
+  `R` = salto (backflip). **Lopen is procedureel** (heup/knie/arm-botten bovenop `staan`), want er is
+  geen loopclip; komt er een clip `lopen` in figuren.glb, dan gebruikt de viewer die automatisch.
+- Botsing: `vakken` + `rondjes` + dansers als rondjes (r 0.32). Vakken/rondjes met hoogte ≤ voeten +
+  0.35 m kan je op stappen (hun bovenkant wordt grond); speelgrens is een cirkel met straal `grens`.
+- Beat (`ritme.js`): microfoon (echoCancellation/noiseSuppression/autoGainControl uit, FFT 1024,
+  analyse elke 10 ms): log-spectrale flux 35–130 Hz met adaptieve drempel (mediaan + k·afwijking),
+  BPM uit histogram van tussentijden (voorkeur 134–151), fase uit kort/lang-energie, hi-hat-opbouw
+  (4–12 kHz) en 'kick terug na break' = drop. Terugval: 142 BPM, cyclus 72–112 maten (~70/15/15),
+  in de laatste kwart van de opbouw valt de kick weg. `T` tikt tempo + beatfase, `X` springt naar de
+  drop. Extra velden in `ritme`: `bron`, `tel`, `beatFase`, `spanning`, `drop` (0..1 vloeiend), `sindsWissel`.
+- Debug-parameters: `?fase=basis|opbouw|drop` (forceren), `?bpm=`, `?kwaliteit=hoog|licht`,
+  `?auto` (meteen starten, zonder muisvergrendeling), `?kijk=x,y,z,tx,ty,tz` (vaste camera).
+  Console: `window.rave` (speler, cam, ritme, licht, dansers, composer, info).
+- Prestatie (gemeten, echte assets): hoog ≈ 320 tekenopdrachten en 6.5 M driehoeken per frame,
+  waarvan ≈ 2.4 M voor de 62 figuren (± 39k driehoeken elk) en hetzelfde nog eens in de schaduwpas;
+  licht ≈ 150 opdrachten / 1.5 M driehoeken (geen schaduw, figuren > 36 m niet getekend, verre figuren
+  6–15× per seconde geüpdatet). **Wens aan figuren**: een lage-polyversie (bv. `danser_xbot_laag`,
+  ~6–8k driehoeken) voor verre figuren en telefoons.
+
 ## Mappen en bestanden
 ```
 rave/
