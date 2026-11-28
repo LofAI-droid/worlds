@@ -1425,7 +1425,7 @@ def renderlicht(col):
         elif naam.startswith('licht_boom'):
             lamp('R_' + naam, 'SPOT', pos, d, kleur, 150000, hoek=70, straal=0.15)
         elif naam == 'licht_vuur':
-            lamp('R_' + naam, 'POINT', pos, d, kleur, 900, straal=0.4)
+            lamp('R_' + naam, 'POINT', pos, d, kleur, 3000, straal=0.4)
         elif naam.startswith('licht_muur'):
             lamp('R_' + naam, 'SPOT', pos, d, kleur, 6000, hoek=70, straal=0.1)
         elif naam.startswith('licht_warm'):
@@ -1445,7 +1445,7 @@ def renderlicht(col):
     # mist: volumeblok met dichtheid die naar boven toe afneemt
     me = bpy.data.meshes.new('R_mist')
     s = 75.0
-    me.from_pydata([(-s, -s, 0), (s, -s, 0), (s, s, 0), (-s, s, 0), (-s, -s, 22), (s, -s, 22), (s, s, 22), (-s, s, 22)],
+    me.from_pydata([(-s, -s, -1), (s, -s, -1), (s, s, -1), (-s, s, -1), (-s, -s, 22), (s, -s, 22), (s, s, 22), (-s, s, 22)],
                    [], [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)])
     m = bpy.data.materials.new('R_mist')
     m.use_nodes = True
@@ -1528,7 +1528,7 @@ def renderlicht(col):
         bm.free()
         me.materials.append(rm)
         o = bpy.data.objects.new('R_' + naam, me)
-        o.location = (pos[0], pos[1], 1.2)
+        o.location = (pos[0], pos[1], 2.65)       # volledig boven de grond (geen snijlijn)
         o.scale = (4.5, 4.5, 2.6)
         col.objects.link(o)
 
