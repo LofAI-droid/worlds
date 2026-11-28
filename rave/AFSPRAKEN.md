@@ -90,7 +90,42 @@ een vleugje zuurgroen, op bijna zwart/nachtblauw.
   glowstick → rechterhand, halsband → nek, koptelefoon/masker → hoofd.
 - Later komen echte Mixamo-mensen; het script moet dan met een lijst personages hetzelfde doen.
 - Budget **< 8 MB**.
-- Botnamen (in te vullen door figuren): `...`
+- Botnamen (65, Mixamo-standaard; in de glb `mixamorig:<Naam>`, in three.js na GLTFLoader
+  **zonder dubbele punt**: `mixamorig<Naam>`, bv. `mixamorigHips`):
+  `Hips`, `Spine`, `Spine1`, `Spine2`, `Neck`, `Head`, `HeadTop_End`,
+  `RightShoulder`, `RightArm`, `RightForeArm`, `RightHand`,
+  `RightHand{Thumb,Index,Middle,Ring,Pinky}{1,2,3,4}`, idem `Left…`,
+  `RightUpLeg`, `RightLeg`, `RightFoot`, `RightToeBase`, `RightToe_End`, idem `Left…`.
+
+### Stand van figuren.glb (door figuren ingevuld)
+- Bestand ≈ 2.4 MB (Draco op de meshes — skinning getest in three.js 0.170, werkt; viewer heeft
+  dus `DRACOLoader` nodig, zoals voor rave.glb). 30 fps.
+- Knopen: `danser_xbot` (skelet, extras: `hoogte`, `fps`, `wiegen_bpm`, `clips` als JSON
+  naam→duur), daaronder `danser_xbot_lijf` (SkinnedMesh, 24.8k punten, `figuur_huid`).
+  Accessoires staan als losse knopen al **op hun plaats op de rustpose**.
+- Clips (s): `house_1` 21.37, `house_2` 26.17, `house_3` 19.80 (Mixamo-lussen, volledig behouden,
+  naad gecontroleerd), `backflip` 5.83 (géén lus: eindigt in de houding van `staan` beeld 0 → mooi
+  overvloeien naar staan/wiegen), `staan` 4.00 (lus), `wiegen` 6.767 = **16 beats aan 141.87 BPM**
+  (lus; beat valt op t = 0, 0.4229, …: diepste knik op de beat). Voor sync met `ritme.bpm`:
+  `timeScale = ritme.bpm / 141.87`.
+- Wortelbeweging is **al verwijderd in de glb**: de trage horizontale verplaatsing van de heup is
+  eruit gefilterd (glijdend gemiddelde 1.5 s), het heupwiegen (±0.2–0.3 m in house, ±0.5 m tijdens de
+  backflip) en alle verticale beweging blijven. De viewer hoeft de `Hips.position`-sporen niet meer
+  plat te maken (dat bevriest het heupwiegen en laat de voeten meer glijden).
+- Accessoires: extras `bot` (three.js-naam), `bot_gltf`, `positie` [x,y,z] m en `rotatie`
+  [x,y,z,w] = lokale transformatie t.o.v. dat bot in three.js (getest: gelijk aan `bot.attach(acc)`
+  in rustpose). Dus: `bot.add(acc); acc.position.fromArray(positie); acc.quaternion.fromArray(rotatie)`.
+  | Accessoire | Bot (three.js) | positie | rotatie (x,y,z,w) | Materialen |
+  |---|---|---|---|---|
+  | `acc_glowstick` | `mixamorigRightHand` | (0, 0.0876, 0.025) | (-0.5, 0.5, -0.5, 0.5) | `gloed_glowstick` |
+  | `acc_halsband` | `mixamorigNeck` | (0, 0.0283, 0) | (0.0609, 0, 0, 0.9981) | `gloed_glowstick` |
+  | `acc_koptelefoon` | `mixamorigHead` | (0, 0.0805, -0.0022) | (0.0609, 0, 0, 0.9981) | `acc_kunststof` + `gloed_glowstick` (ringen) |
+  | `acc_masker` | `mixamorigHead` | (0, 0.0749, 0.1425) | (0.0609, 0, 0, 0.9981) | `acc_masker` |
+  Glowstick ligt dwars tegen de handpalm (de handen zijn in de Mixamo-dansen niet altijd gesloten).
+  `gloed_glowstick`: emissive `#3dff7a`, sterkte 1 (viewer mag kleur/sterkte per kloon variëren).
+- Meer personages: `PERSONAGES` bovenaan `bouw_figuren.py`; elk wordt `danser_<naam>` met dezelfde
+  (geretargete) clips. Het eerste personage heeft de clipnamen hierboven; clips van latere
+  personages heten `<naam>:<clip>` (anders botsen dezelfde botnamen in één glTF-animatie).
 
 ## Viewer — `rave/index.html`, `rave/*.js`, `rave/stijl.css`
 - Vertrekt van `ministad/wandel.js` (lopen, botsing, camera, kaart, aanraakbediening).

@@ -56,17 +56,19 @@ export class FigurenBron {
     // waar elk accessoire op zijn bot komt (rustpose)
     this.accLokaal = {};
     for (const [soort, a] of Object.entries(this.acc)) {
-      const bot = proto.getObjectByName(this.botNamen[ACC[soort]] || '');
+      const eigen = a.userData.bot && proto.getObjectByName(a.userData.bot) ? a.userData.bot : null;
+      if (eigen) this.botNamen['acc_' + soort] = eigen;
+      const bot = proto.getObjectByName(eigen || this.botNamen[ACC[soort]] || '');
       if (!bot) continue;
       const botW = bot.matrixWorld;
       let accW;
       const p = new THREE.Vector3().setFromMatrixPosition(a.userData.wereld);
-      if (a.userData.offset && Array.isArray(a.userData.offset)) {
-        // afspraak van de figuren-agent: offset (en rotatie) in het assenstelsel van het bot
-        const lok = new THREE.Matrix4().compose(
-          new THREE.Vector3(...a.userData.offset),
-          new THREE.Quaternion().setFromEuler(new THREE.Euler(...(a.userData.rotatie || [0, 0, 0]))),
-          new THREE.Vector3(1, 1, 1));
+      const off = a.userData.positie || a.userData.offset;
+      if (Array.isArray(off) && off.length === 3) {
+        // extras van figuren.glb: positie (m) en rotatie (quaternion x,y,z,w of euler) in het assenstelsel van het bot
+        const rot = a.userData.rotatie || [0, 0, 0, 1];
+        const q = rot.length === 4 ? new THREE.Quaternion(...rot) : new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot));
+        const lok = new THREE.Matrix4().compose(new THREE.Vector3(...off), q.normalize(), new THREE.Vector3(1, 1, 1));
         const s = new THREE.Vector3().setFromMatrixScale(botW);
         lok.scale(new THREE.Vector3(1 / s.x, 1 / s.y, 1 / s.z));
         this.accLokaal[soort] = lok;
@@ -88,6 +90,8 @@ export class FigurenBron {
       this.clips[naam] = this.zonderWortelbeweging(c, proto);
     }
     this.proto = proto;
+    const info = node.userData || {};
+    this.wiegenBpm = Number(info.wiegen_bpm) || 142;
 
     // huidvarianten: donker en mat met lichte glans, telkens een tikje anders
     this.huid = [];
@@ -161,7 +165,7 @@ export class FigurenBron {
       const bron = this.acc[soort];
       const lok = this.accLokaal[soort];
       if (!bron || !lok) return null;
-      const bot = figuur.getObjectByName(this.botNamen[ACC[soort]]);
+      const bot = figuur.getObjectByName(this.botNamen['acc_' + soort] || this.botNamen[ACC[soort]]);
       if (!bot) return null;
       const a = bron.clone();
       a.matrixAutoUpdate = true;
@@ -228,6 +232,9 @@ export class Dansers {
       f.obj.position.set(plaats.x, y, plaats.z);
       f.obj.rotation.y = (plaats.h || 0) + Math.PI;           // figuur kijkt naar +z, h volgt Ministad
       this.groep.add(f.obj);
+      // schaduw alleen van wie in het licht van het podium staat
+      const inLicht = zone === 'vloer' || zone === 'podium';
+      f.obj.traverse((o) => { if (o.isMesh) o.castShadow = inLicht && o.castShadow; });
       Object.assign(f, {
         zone, i, dj: zone === 'podium' && !this.lijst.some((d) => d.zone === 'podium'),
         temperament: Math.random(), wacht: Math.random() * 2, opgeteld: 0, wissel: 8 + Math.random() * 14
@@ -269,7 +276,7 @@ export class Dansers {
       this.vorigeFase = ritme.fase;
     }
     const tempo = klem(ritme.bpm / CLIP_BPM, 0.88, 1.2);
-    const rustig = klem(ritme.bpm / 142, 0.85, 1.15);
+    const rustig = klem(ritme.bpm / this.bron.wiegenBpm, 0.85, 1.15);
 
     // af en toe een backflip in de drop
     this.flipKlok -= dt;
@@ -295,7 +302,9 @@ export class Dansers {
         if (f.huidigNaam !== 'backflip') f.speel(this.keuze(f, ritme.fase), 0.9);
       }
       this.bol.center.set(f.obj.position.x, f.obj.position.y + 0.9, f.obj.position.z);
-      f.zichtbaar = this.frustum.intersectsSphere(this.bol);
+      const dCam = this.bol.center.distanceTo(cam);
+      // lichte modus: verre figuren (in de mist) niet tekenen
+      f.zichtbaar = (!licht || dCam < 36) && this.frustum.intersectsSphere(this.bol);
       f.obj.visible = f.zichtbaar;
       f.opgeteld += dt;
       if (!f.zichtbaar) { f.opgeteld = Math.min(f.opgeteld, 3); continue; }

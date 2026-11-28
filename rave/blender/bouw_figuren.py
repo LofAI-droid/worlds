@@ -13,7 +13,7 @@ Wat het doet
    - horizontale wortelbeweging (heup) wordt weggefilterd (trage verplaatsing eruit,
      het heupwiegen blijft), verticale beweging blijft;
    - dansen worden lussen: beste begin/eindpunt zoeken + kruisovervloeien;
-   - backflip loopt aan het einde terug naar zijn beginhouding (neutraal, sluit aan).
+   - backflip vloeit aan het einde over naar de houding van `staan` (neutraal, sluit aan).
 2. Maakt zelf `staan` (4 s) en `wiegen` (16 beats rond 142 BPM) met keyframes,
    benen met een kleine IK zodat de voeten op de grond blijven.
 3. Importeert elk personage uit PERSONAGES, schaalt naar HOOGTE, voeten op 0, gecentreerd,
@@ -63,8 +63,8 @@ STAAN_S = 4.0          # duur van `staan`
 WIEGEN_BEATS = 16      # lengte van `wiegen` in beats (lus)
 WORTEL_VENSTER = 1.5   # s, glijdend gemiddelde van de heup dat als wortelbeweging verdwijnt
 OVERVLOEI = 15         # beelden kruisovervloeien bij lussen
-TERUG = 24             # beelden waarin de backflip terugkeert naar zijn beginhouding
-DRACO = False          # Draco werkt met skinning in three.js, maar levert hier weinig op
+TERUG = 30             # beelden waarin de backflip overvloeit naar `staan` (beeld 0)
+DRACO = True           # Draco getest: skinning blijft werken in three.js (DRACOLoader nodig)
 GLOED = '#3dff7a'      # standaardkleur glowstick (viewer mag variëren)
 
 ZAAD = 7
@@ -246,7 +246,7 @@ def zonder_wortel(clip, periodiek=False):
 def is_al_lus(clip):
     """Mixamo levert sommige dansen al als lus: laatste beeld = eerste, en de beweging
     loopt door (versnelling over de naad niet groter dan gewoonlijk)."""
-    D = clip.D
+    D = clip.D[:, hoofdbotten(clip) > 0]  # vingers tellen niet (naad_glad lost die op)
     n = len(D)
     if n < 10:
         return False
@@ -262,6 +262,21 @@ def is_al_lus(clip):
 
     gewoon = np.percentile([versn(i, i + 1, i + 2) for i in range(n - 2)], 90)
     return versn(n - 2, 0, 1) <= gewoon
+
+
+def naad_glad(clip, k=12):
+    """Kleine resterende verschillen tussen laatste en eerste beeld (bv. vingers) over de
+    laatste k beelden wegwerken, zodat het slotbeeld exact het eerste is."""
+    D = clip.D.copy()
+    n = len(D)
+    fout = qmul(D[0], qconj(D[-1]))  # per bot: draai van laatste naar eerste
+    fout *= np.where(fout[:, :1] < 0, -1.0, 1.0)
+    een = np.zeros_like(fout)
+    een[:, 0] = 1
+    for i in range(k):
+        g = zacht((i + 1) / k)
+        D[n - k + i] = qnorm(qmul(qmeng(een, fout, g), D[n - k + i]))
+    clip.D = qcontinu(D)
 
 
 def hoofdbotten(clip):
@@ -315,17 +330,21 @@ def maak_lus(clip):
     print(f'  {clip.naam}: lus beeld {a}..{b} ({L} beelden = {L / FPS:.2f} s), kost {beste[0]:.4f}')
 
 
-def eindig_neutraal(clip):
-    """Laatste TERUG beelden vloeien terug naar het eerste beeld (neutrale beginhouding)."""
+def eindig_neutraal(clip, doel):
+    """Laatste TERUG beelden vloeien over naar beeld 0 van `doel` (de neutrale `staan`),
+    zodat de clip eindigt in een rustige stand die naadloos aansluit op staan/wiegen."""
     D, h = clip.D.copy(), clip.h.copy()
     n = len(D)
+    idx = {b: j for j, b in enumerate(doel.botten)}
+    dD = np.array([doel.D[0, idx[b]] if b in idx else D[-1, j] for j, b in enumerate(clip.botten)])
     for k in range(TERUG):
         t = n - TERUG + k
         g = zacht((k + 1) / TERUG)
-        D[t] = qmeng(D[t], D[0], g)
-        h[t] = h[t] * (1 - g) + h[0] * g
+        D[t] = qmeng(D[t], dD, g)
+        h[t] = h[t] * (1 - g) + doel.h[0] * g
     clip.D, clip.h = qcontinu(D), h
-    print(f'  {clip.naam}: {n} beelden ({(n - 1) / FPS:.2f} s), eindigt in beginhouding')
+    print(f'  {clip.naam}: {n} beelden ({(n - 1) / FPS:.2f} s), eindigt in de houding van '
+          f'{doel.naam} (beeld 0)')
 
 
 # =====================================================================
@@ -961,7 +980,7 @@ def render(dansers, stuk, hechting, clips):
     bm.free()
     vo = bpy.data.objects.new('vloer', vloer)
     col.objects.link(vo)
-    vloer.materials.append(materiaal('v_aarde', '#1d1712', 0.75))
+    vloer.materials.append(materiaal('v_aarde', '#110e0b', 0.7))
 
     def lamp(naam, soort, kleur, energie, pos, doel, hoek=40, straal=0.2):
         ld = bpy.data.lights.new(naam, soort)
@@ -995,8 +1014,8 @@ def render(dansers, stuk, hechting, clips):
     bm.to_mesh(mist)
     bm.free()
     mo = bpy.data.objects.new('mist', mist)
-    mo.scale = (24, 26, 9)
-    mo.location = (0, 2, 4.4)
+    mo.scale = (24, 20, 9)      # vooral achter de figuren: stralen, geen waas ervoor
+    mo.location = (0, 9.5, 4.4)
     col.objects.link(mo)
     mm = bpy.data.materials.new('mist')
     mm.use_nodes = True
@@ -1042,14 +1061,14 @@ def main():
         c = lees_animatie(naam, bestand, soort)
         if soort == 'lus' and is_al_lus(c):
             zonder_wortel(c, periodiek=True)
+            naad_glad(c)
             print(f'  {naam}: is al een naadloze lus ({c.beelden - 1} beelden = '
                   f'{(c.beelden - 1) / FPS:.2f} s), volledig behouden')
         elif soort == 'lus':
             zonder_wortel(c)
             maak_lus(c)
         else:
-            zonder_wortel(c)
-            eindig_neutraal(c)
+            zonder_wortel(c)  # einde: zie eindig_neutraal, zodra `staan` bestaat
         clips.append(c)
 
     wis_alles()
@@ -1072,6 +1091,9 @@ def main():
             staan = maak_staan(rust)
             wiegen, wiegen_bpm = maak_wiegen(rust)
             eigen = [staan, wiegen]
+            for c in clips:
+                if c.soort != 'lus':
+                    eindig_neutraal(c, staan)
         sporen = []
         for c in clips + eigen:
             spoor = c.naam if pi == 0 else f'{naam}:{c.naam}'

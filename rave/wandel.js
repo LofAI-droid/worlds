@@ -68,15 +68,15 @@ const lucht = maakLucht(camera);
 scene.add(lucht.mesh);
 
 // zwak maanlicht en hemellicht; de rest komt van het feest zelf
-scene.add(new THREE.HemisphereLight('#26306a', '#0b0806', 0.55));
-const maan = new THREE.DirectionalLight('#9fb4ff', 0.32);
+scene.add(new THREE.HemisphereLight('#2a3578', '#0d0a08', 0.9));
+const maan = new THREE.DirectionalLight('#9fb4ff', 0.5);
 maan.position.copy(MAAN_RICHTING).multiplyScalar(100);
 scene.add(maan, maan.target);
 
 // nabewerking: bloom op alles wat gloeit
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.62);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.7, 0.55, 0.7);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -505,7 +505,7 @@ function zetKwaliteit(k) {
   kwaliteit = k;
   const licht_ = k === 'licht';
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, licht_ ? 1 : 1.75) * (licht_ && aanraak ? 0.8 : 1));
-  bloom.strength = licht_ ? 0.6 : 0.85;
+  bloom.strength = licht_ ? 0.5 : 0.7;
   bloom.radius = licht_ ? 0.4 : 0.55;
   maat();
   if (licht) licht.zetKwaliteit(k);
@@ -770,7 +770,7 @@ function lus() {
 
 // voor wie wil meekijken in de console
 window.rave = {
-  speler, cam, ritme, camera, scene, renderer,
+  speler, cam, ritme, camera, scene, renderer, composer,
   get licht() { return licht; }, get dansers() { return dansers; }, get info() { return renderer.info.render; },
   zetKwaliteit, start
 };

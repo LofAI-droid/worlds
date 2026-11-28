@@ -6,8 +6,9 @@
 // de lokale −Y van de three.js-node. Die richting gebruiken we.
 import * as THREE from 'three';
 
-const TYPES = ['spot', 'laser', 'boom', 'vuur', 'blinder', 'rook'];
+const TYPES = ['spot', 'laser', 'boom', 'vuur', 'blinder', 'rook', 'warm', 'muur'];
 const STANDAARD_KLEUR = {
+  warm: '#ff5a2a', muur: '#ff8a2a',
   spot: '#22e6ff', laser: '#33ff66', boom: '#ff2fd0', vuur: '#ff7a1a', blinder: '#fff2dd', rook: '#ffffff'
 };
 export const PALET = ['#22e6ff', '#ff2fd0', '#ff8a1a', '#7a2cff', '#9dff2a', '#ff2040'].map((k) => new THREE.Color(k));
@@ -131,7 +132,7 @@ function kegelMateriaal(kleur) {
       ${RUIS_GLSL}
       void main() {
         float afst = length(vV);
-        float rand = pow(abs(dot(normalize(vN), vV / afst)), 1.4);
+        float rand = pow(abs(dot(normalize(vN), vV / afst)), 1.1);
         float lengte = smoothstep(0.0, 0.025, vLangs) * pow(1.0 - vLangs, 1.3);
         float grond = smoothstep(0.0, 1.4, vW.y);
         float laag = mix(1.2, 0.55, smoothstep(1.5, 12.0, vW.y));
@@ -190,7 +191,11 @@ export class Lichtshow {
       if (!m || !this.ankers[m[1]]) return;
       const pos = o.getWorldPosition(new THREE.Vector3());
       o.getWorldQuaternion(q);
-      const richting = new THREE.Vector3(0, -1, 0).applyQuaternion(q).normalize();
+      // extras.richting (wereldrichting, three.js) heeft voorrang; anders lokale −Y (= Blender −Z)
+      const ex = o.userData.richting;
+      const richting = Array.isArray(ex) && ex.length === 3
+        ? new THREE.Vector3(ex[0], ex[1], ex[2]).normalize()
+        : new THREE.Vector3(0, -1, 0).applyQuaternion(q).normalize();
       const kleur = new THREE.Color(typeof o.userData.kleur === 'string' ? o.userData.kleur : STANDAARD_KLEUR[m[1]]);
       this.ankers[m[1]].push({ naam: o.name, pos, richting, kleur });
     });
@@ -204,6 +209,7 @@ export class Lichtshow {
     this.maakSpots();
     this.maakLasers();
     this.maakBoom();
+    this.maakSfeer();
     this.maakVuur();
     this.maakBlinders();
     this.maakRook();
@@ -238,7 +244,7 @@ export class Lichtshow {
     this.spots = this.ankers.spot.map((a, i) => {
       const grondT = a.richting.y < -0.05 ? a.pos.y / -a.richting.y : 40;
       const lengte = Math.min(grondT * 1.08 + 1, 48);
-      const kegel = maakKegel(a.kleur, lengte, 0.085);
+      const kegel = maakKegel(a.kleur, lengte, 0.08);
       kegel.position.copy(a.pos);
       this.groep.add(kegel);
       // horizontale as loodrecht op de straal, voor het kantelen
@@ -327,7 +333,7 @@ export class Lichtshow {
         ${RUIS_GLSL}
         void main() {
           float a = vD.x;
-          float kern = exp(-a * a * 14.0) + 0.25 * exp(-a * a * 2.5);
+          float kern = exp(-a * a * 16.0) + 0.12 * exp(-a * a * 3.0);
           float langs = 1.0 - pow(vD.y, 6.0);
           float mist = 0.35 + 0.9 * rMist(vW * 1.3, tijd * 1.5);
           float laag = mix(1.1, 0.6, smoothstep(2.0, 14.0, vW.y));
@@ -340,10 +346,7 @@ export class Lichtshow {
     this.laserMesh.renderOrder = 6;
     this.groep.add(this.laserMesh);
 
-    // lichtpuntjes op de grond
-    const pgeo = new THREE.BufferGeometry();
-    pgeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
-    pgeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    // materiaal voor zachte lichtpuntjes (vonken)
     this.puntMat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, vertexColors: true,
       uniforms: { map: { value: this.texGloed }, schaal: { value: 300 } },
@@ -353,13 +356,47 @@ export class Lichtshow {
       fragmentShader: `uniform sampler2D map; varying vec3 vK;
         void main() { float a = texture2D(map, gl_PointCoord).r; gl_FragColor = vec4(vK * a, 1.0); }`
     });
-    this.puntjes = new THREE.Points(pgeo, this.puntMat);
-    this.puntjes.frustumCulled = false;
-    this.puntjes.renderOrder = 6;
-    this.groep.add(this.puntjes);
+    // vlekjes waar de stralen de grond raken: platte vierkantjes op de grond (geen punten,
+    // die zakken half door de grond)
+    const vgeo = new THREE.BufferGeometry();
+    const vuv = new Float32Array(n * 8);
+    const vidx = [];
+    for (let i = 0; i < n; i++) { vuv.set([0, 0, 1, 0, 0, 1, 1, 1], i * 8); const o = i * 4; vidx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3); }
+    vgeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 12), 3).setUsage(THREE.DynamicDrawUsage));
+    vgeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 12), 3).setUsage(THREE.DynamicDrawUsage));
+    vgeo.setAttribute('uv', new THREE.BufferAttribute(vuv, 2));
+    vgeo.setIndex(vidx);
+    this.vlekken = new THREE.Mesh(vgeo, new THREE.MeshBasicMaterial({
+      map: this.texGloed, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      fog: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4
+    }));
+    this.vlekken.frustumCulled = false;
+    this.vlekken.renderOrder = 6;
+    this.groep.add(this.vlekken);
   }
 
   // ---------------------------------------------------------- boom-uplights
+  /** Kleine sfeerlampen: `licht_warm_*` (warm hangend licht) en `licht_muur_*` (strijklicht op de ruïne). */
+  maakSfeer() {
+    this.warm = this.ankers.warm.map((a) => {
+      const l = new THREE.PointLight(a.kleur, 0, 9, 2);
+      l.position.copy(a.pos);
+      this.groep.add(l);
+      return { ...a, licht: l, fase: Math.random() * 6 };
+    });
+    this.muur = this.ankers.muur.map((a) => {
+      const l = new THREE.SpotLight(a.kleur, 0, 18, 0.7, 0.9, 2);
+      l.position.copy(a.pos);
+      l.target.position.copy(a.pos).addScaledVector(a.richting, 6);
+      this.groep.add(l, l.target);
+      const kegel = maakKegel(a.kleur, 6, 0.35);
+      kegel.position.copy(a.pos);
+      kegel.lookAt(a.pos.clone().add(a.richting));
+      this.groep.add(kegel);
+      return { ...a, licht: l, kegel };
+    });
+  }
+
   maakBoom() {
     this.boom = this.ankers.boom.map((a, i) => {
       const kegel = maakKegel(a.kleur, 11, 0.32);
@@ -484,7 +521,9 @@ export class Lichtshow {
     const a = Math.random() * Math.PI * 2, r = Math.random() * 2.5;
     d.p.set(d.bron.pos.x + Math.cos(a) * r, d.bron.pos.y + 0.4 + Math.random() * 0.8, d.bron.pos.z + Math.sin(a) * r);
     const s = 0.25 + Math.random() * 0.45;
-    d.v.set(Math.cos(a) * s, 0.04 + Math.random() * 0.1, Math.sin(a) * s + 0.15);
+    d.v.set(Math.cos(a) * s, 0.04 + Math.random() * 0.1, Math.sin(a) * s);
+    // rook waait in de richting van het anker (bv. van het podium naar de menigte), maar blijft laag
+    d.v.x += d.bron.richting.x * 0.45; d.v.z += d.bron.richting.z * 0.45;
     d.leef = 0;
     d.duur = 12 + Math.random() * 10;
     d.draai = Math.random() * 6.28;
@@ -558,7 +597,11 @@ export class Lichtshow {
     this.kwaliteit = k;
     const licht = k === 'licht';
     this.verdeelSpotLampen();
-    this.boom.forEach((b, i) => { b.licht.visible = !licht || i === 0; });
+    // budget echte lampen: hoog ±11, licht ±5
+    const kies = (lijst, n) => lijst.forEach((x, i) => { x.licht.visible = i < n && i % Math.max(1, Math.floor(lijst.length / n)) === 0; });
+    kies(this.boom, licht ? 1 : 2);
+    kies(this.warm, licht ? 1 : 2);
+    this.muur.forEach((m, i) => { m.licht.visible = !licht && i === Math.floor(this.muur.length / 2); });
     if (this.blinderLamp) this.blinderLamp.visible = !licht;
     this.rookMesh.geometry.instanceCount = licht ? Math.ceil(this.rookMax * 0.45) : this.rookMax;
     this.laserActief = licht ? 4 : this.laserPer;
@@ -581,6 +624,12 @@ export class Lichtshow {
     this.updateSpots(dt, t, ritme, tel, opbouw);
     this.updateLasers(t, ritme, tel, opbouw, camera);
     this.updateBoom(t, ritme);
+    for (const w of this.warm) w.licht.intensity = 25 * (1 + 0.06 * Math.sin(t * 2.1 + w.fase));
+    for (const m of this.muur) {
+      m.licht.intensity = 260;
+      m.kegel.material.uniforms.sterkte.value = 0.12;
+      m.kegel.material.uniforms.tijd.value = t;
+    }
     this.camQuat = camera.quaternion;
     this.updateVuur(dt, t);
     this.updateBlinders(t, ritme, camera, opbouw);
@@ -597,7 +646,7 @@ export class Lichtshow {
       if (drop > 0.5) {
         // in de drop: zwaaien op de maat, links en rechts in tegenfase
         const slag = Math.sin(tel * Math.PI / 2) * s.links;
-        pan = slag * 0.32 + Math.sin(s.fase * 0.7) * 0.08;
+        pan = slag * 0.24 + Math.sin(s.fase * 0.7) * 0.06;
         tilt = Math.cos(tel * Math.PI / 4) * 0.12 - 0.05;
       } else {
         pan = Math.sin(s.fase + Math.sin(s.fase * 0.37) * 1.3) * 0.28 * s.links;
@@ -611,7 +660,7 @@ export class Lichtshow {
         const k = PALET[(Math.floor(tel / 8) + this.spots.indexOf(s)) % 4];
         s.kleurNu.lerp(k, Math.min(1, dt * 6));
       } else s.kleurNu.lerp(s.kleur, Math.min(1, dt * 2));
-      const sterkte = 0.22 + 0.2 * opbouw + beat * (0.18 + drop * 0.5) + drop * 0.25;
+      const sterkte = 0.75 + 0.4 * opbouw + beat * (0.35 + drop * 1.0) + drop * 0.5;
       const u = s.kegel.material.uniforms;
       u.kleur.value.copy(s.kleurNu);
       u.sterkte.value = sterkte;
@@ -629,7 +678,7 @@ export class Lichtshow {
     const { beat, drop, fase } = ritme;
     const geo = this.laserMesh.geometry;
     const pos = geo.attributes.position.array, kl = geo.attributes.color.array;
-    const ppos = this.puntjes.geometry.attributes.position.array, pkl = this.puntjes.geometry.attributes.color.array;
+    const ppos = this.vlekken.geometry.attributes.position.array, pkl = this.vlekken.geometry.attributes.color.array;
     const per = this.laserPer;
     const cam = camera.position;
     const S = new THREE.Vector3(), E = new THREE.Vector3(), d = new THREE.Vector3(), w = new THREE.Vector3(), naar = new THREE.Vector3();
@@ -647,11 +696,13 @@ export class Lichtshow {
       const zwaai = drop > 0.5 ? Math.sin(tel * Math.PI / 4 + li) * 0.35 : Math.sin(t * tempo * 0.6 + L.fase) * 0.22;
       const kantel = drop > 0.5 ? (Math.floor(tel / 2) % 2 ? 0.12 : -0.08) + Math.sin(t * 2 + li) * 0.04 : Math.sin(t * tempo * 0.4 + L.fase * 2) * 0.1;
       const flikker = opbouw > 0.6 ? (Math.sin(t * (30 + opbouw * 40)) > 0 ? 1 : 0.15) : 1;
-      const sterkte = L.aan * flikker * (1.4 + beat * (0.8 + drop * 2.2)) * 2.4;
+      const sterkte = L.aan * flikker * (fase === 'drop' ? 0.85 + beat * 1.2 : 0.5 + beat * 0.3 + opbouw * 0.5);
+      // aantal stralen per laser: weinig in de basis, een volle waaier in de drop
+      const stralen = Math.min(this.laserActief, fase === 'drop' ? per : fase === 'opbouw' ? 3 + Math.round(opbouw * (per - 3)) : 3);
       for (let k = 0; k < per; k++, b++) {
         const o = b * 12;
-        const actief = k < this.laserActief && sterkte > 0.02;
-        const hoek = per > 1 ? (k / (per - 1) - 0.5) * breed : 0;
+        const actief = k < stralen && sterkte > 0.02;
+        const hoek = stralen > 1 ? (k / (stralen - 1) - 0.5) * breed : 0;
         d.copy(L.richting).applyAxisAngle(OMHOOG, hoek + zwaai).applyAxisAngle(L.zij, kantel + Math.sin(k * 1.7 + t * tempo) * 0.04 * (1 + drop)).normalize();
         let lengte = 90;
         let raak = false;
@@ -671,22 +722,23 @@ export class Lichtshow {
         }
         const r = L.kleur.r * sterkte, g = L.kleur.g * sterkte, bl = L.kleur.b * sterkte;
         for (let i = 0; i < 4; i++) { kl[o + i * 3] = actief ? r : 0; kl[o + i * 3 + 1] = actief ? g : 0; kl[o + i * 3 + 2] = actief ? bl : 0; }
-        // puntje op de grond
-        const p3 = b * 3;
-        if (actief && raak) {
-          ppos[p3] = E.x; ppos[p3 + 1] = 0.03; ppos[p3 + 2] = E.z;
-          pkl[p3] = r * 0.9; pkl[p3 + 1] = g * 0.9; pkl[p3 + 2] = bl * 0.9;
-        } else {
-          ppos[p3] = ppos[p3 + 1] = ppos[p3 + 2] = 0; pkl[p3] = pkl[p3 + 1] = pkl[p3 + 2] = 0;
+        // vlekje op de grond
+        const v12 = b * 12;
+        const zichtbaar = actief && raak;
+        const half = 0.22 + lengte * 0.004;
+        for (let i = 0; i < 4; i++) {
+          ppos[v12 + i * 3] = zichtbaar ? E.x + (i & 1 ? half : -half) : 0;
+          ppos[v12 + i * 3 + 1] = 0.02;
+          ppos[v12 + i * 3 + 2] = zichtbaar ? E.z + (i & 2 ? half : -half) : 0;
+          pkl[v12 + i * 3] = zichtbaar ? r * 1.6 : 0; pkl[v12 + i * 3 + 1] = zichtbaar ? g * 1.6 : 0; pkl[v12 + i * 3 + 2] = zichtbaar ? bl * 1.6 : 0;
         }
       }
     });
     geo.attributes.position.needsUpdate = true;
     geo.attributes.color.needsUpdate = true;
-    this.puntjes.geometry.attributes.position.needsUpdate = true;
-    this.puntjes.geometry.attributes.color.needsUpdate = true;
+    this.vlekken.geometry.attributes.position.needsUpdate = true;
+    this.vlekken.geometry.attributes.color.needsUpdate = true;
     this.laserMesh.material.uniforms.tijd.value = t;
-    this.puntMat.uniforms.schaal.value = innerHeight * 0.9;
   }
 
   updateBoom(t, ritme) {
@@ -732,8 +784,8 @@ export class Lichtshow {
     const { beat, fase, tel } = ritme;
     let s;
     if (fase === 'drop') {
-      const begin = ritme.sindsWissel < 1.6 ? 1 - ritme.sindsWissel / 1.6 : 0;
-      s = Math.max(begin * 1.2, tel % 4 === 0 ? beat : beat * 0.12);
+      const begin = ritme.sindsWissel < 1.2 ? 1 - ritme.sindsWissel / 1.2 : 0;
+      s = Math.max(begin, tel % 4 === 0 ? beat : beat * 0.12);
     } else if (opbouw > 0.7) {
       s = (Math.sin(t * (20 + opbouw * 30)) > 0.3 ? 1 : 0) * (opbouw - 0.7) * 2.2;
     } else s = 0.015;
@@ -743,10 +795,10 @@ export class Lichtshow {
       naar.copy(camera.position).sub(b.pos).normalize();
       const zicht = glad(-0.1, 0.9, naar.dot(b.richting));
       b.halo.quaternion.copy(camera.quaternion);
-      b.halo.scale.setScalar(1.2 + s * 7 * (0.4 + zicht));
-      b.halo.material.color.copy(b.kleur).multiplyScalar(s * 3.5 * zicht + 0.02);
+      b.halo.scale.setScalar(1.2 + Math.min(s, 1) * 4 * (0.4 + zicht));
+      b.halo.material.color.copy(b.kleur).multiplyScalar(Math.min(s, 1) * 2.2 * zicht + 0.02);
     }
-    if (this.blinderLamp) this.blinderLamp.intensity = s * 30000;
+    if (this.blinderLamp) this.blinderLamp.intensity = s * 7000;
   }
 
   updateRook(dt, ritme) {
@@ -763,7 +815,7 @@ export class Lichtshow {
       d.v.multiplyScalar(1 - dt * 0.03);
       d.draai += d.dv * dt;
       const k = d.leef / d.duur;
-      const alfa = glad(0, 0.15, k) * (1 - glad(0.6, 1, k)) * 0.16;
+      const alfa = glad(0, 0.15, k) * (1 - glad(0.6, 1, k)) * 0.17;
       P[i * 3] = d.p.x; P[i * 3 + 1] = d.p.y; P[i * 3 + 2] = d.p.z;
       I[i * 3] = d.groot * (0.6 + k * 0.9); I[i * 3 + 1] = alfa; I[i * 3 + 2] = d.draai;
       // de rook wordt verlicht door de spots die er dichtbij langs gaan
@@ -774,7 +826,7 @@ export class Lichtshow {
         if (langs < 0) continue;
         const loodrecht = pl.addScaledVector(s.dir, -langs).length();
         const breedte = 0.6 + langs * 0.09;
-        const f = Math.exp(-(loodrecht * loodrecht) / (breedte * breedte)) * s.kegel.material.uniforms.sterkte.value * 2.2;
+        const f = Math.exp(-(loodrecht * loodrecht) / (breedte * breedte)) * s.kegel.material.uniforms.sterkte.value * 0.9;
         kleur.r += s.kleurNu.r * f; kleur.g += s.kleurNu.g * f; kleur.b += s.kleurNu.b * f;
       }
       kleur.r += this.dominant.r * ritme.beat * 0.15 * ritme.drop;

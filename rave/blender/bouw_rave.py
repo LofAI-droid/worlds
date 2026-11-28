@@ -73,7 +73,7 @@ def hoogte(x, y):
     t = t * t * (3 - 2 * t)
     h = t * (1.2 + 1.8 * noise.noise(Vector((x * 0.03, y * 0.03, 1.7))))
     if r > 85:
-        h += (r - 85) * 0.12
+        h += (r - 85) * 0.05
     return h
 
 
@@ -100,12 +100,12 @@ def psy_patroon(naam, kleuren, zaad, n=512, symm=8, jpg=True):
     v1 = np.sin(r * f1 * np.pi + np.cos(k * f2) * 2.5)
     v2 = np.sin(k * f3 + r * 7.0) * np.cos(r * 5.0 - k * 3.0)
     v3 = np.sin((x * 9 + np.sin(y * 7)) * 1.3) * np.sin((y * 9 + np.cos(x * 6)) * 1.3)
-    lijn1 = np.exp(-(v1 ** 2) * 18)
-    lijn2 = np.exp(-(v2 ** 2) * 22)
-    lijn3 = np.exp(-(v3 ** 2) * 30) * 0.5
+    lijn1 = np.exp(-(v1 ** 2) * 70)
+    lijn2 = np.exp(-(v2 ** 2) * 80) * 0.8
+    lijn3 = np.exp(-(v3 ** 2) * 120) * 0.35
     K = [np.array(N.lin(c), dtype=np.float32) ** (1 / 2.2) for c in kleuren]
     rgb = (lijn1[..., None] * K[0] + lijn2[..., None] * K[1 % len(K)] + lijn3[..., None] * K[2 % len(K)])
-    rgb += 0.06 * K[0] * (0.5 + 0.5 * np.sin(r * 30))[..., None]
+    rgb += 0.025 * K[0] * (0.5 + 0.5 * np.sin(r * 30))[..., None]
     rgb = np.clip(rgb, 0, 1)
     rgba = np.ones((n, n, 4), dtype=np.float32)
     rgba[..., :3] = rgb
@@ -169,7 +169,7 @@ def maak_materialen():
     T = N.ph_tex
     # grond
     pbr('grond_vloer', T('brown_mud_dry', 'diff', 1024, bewerk=_tint((0.85, 0.78, 0.7))),
-        T('brown_mud_dry', 'nor_gl', 512), T('brown_mud_dry', 'rough', 256), puntkleur=True)
+        T('brown_mud_dry', 'nor_gl', 512), ruwheid=0.95, puntkleur=True)
     pbr('grond_gras', T('sparse_grass', 'diff', 1024, bewerk=_tint((0.75, 0.8, 0.7))),
         T('sparse_grass', 'nor_gl', 512), ruwheid=0.95, puntkleur=True)
     pbr('grond_bos', T('leaves_forest_ground', 'diff', 1024, bewerk=_tint((0.7, 0.66, 0.6))),
@@ -283,7 +283,7 @@ def bouw_grond(col):
         if rr < VLOER_R:
             k *= 0.9 + 0.1 * (rr / VLOER_R)          # midden wat donkerder: platgetrapt
         if rr > 40:
-            k *= max(0.55, 1 - (rr - 40) * 0.012)
+            k *= max(0.2, 1 - (rr - 40) * 0.02)
         k = max(0.3, min(1.0, k))
         return (k, k * 0.98, k * 0.96)
 
@@ -492,10 +492,10 @@ def bouw_onderbegroei(col, bomen):
 # =====================================================================
 def bouw_reuzenboom(col, ac):
     c = collectie('Reuzenboom', col)
-    p = dict(hoogte=7.5, stam_r=1.25, seg=[5, 5, 3, 2], zijden=[16, 10, 6, 4], aantal=[6, 4, 3],
+    p = dict(hoogte=9.0, stam_r=1.25, seg=[5, 5, 3, 2], zijden=[16, 10, 6, 4], aantal=[6, 4, 3],
              vanaf=[0.55, 0.3, 0.3], hoek=[(48, 72), (25, 50), (25, 55)], lengte=[(1.3, 1.6), (0.55, 0.7), (0.45, 0.6)],
              dikte=[0.55, 0.5, 0.55], eind=[0.7, 0.45, 0.3, 0.25], buig=[0.05, 0.12, 0.2, 0.3],
-             tropisme=[0.0, 0.04, 0.08, 0.05], kaarten=12, kaart=(2.4, 3.4), tegel=2.0, knoest=0.12,
+             tropisme=[0.0, 0.04, 0.08, 0.05], kaarten=30, kaart=(3.0, 4.3), tegel=2.0, knoest=0.12,
              wortels=7, schors='schors_reus', blad='blad')
     gs, gb = N.boom(random.Random(77), p)
     me_s, me_b = gs.mesh('reuzenboom_schors'), gb.mesh('reuzenboom_blad')
@@ -758,8 +758,8 @@ def bouw_doeken(col):
     c = collectie('Doeken', col)
     g = Geo()
     TX, TY0, TY1, TH = 8.6, 19.6, 28.4, 8.2
-    palen = {'P1': (-15.6, 7.0, 6.8), 'P2': (15.6, 7.0, 6.8), 'P3': (-9.5, -14.8, 6.0), 'P4': (9.5, -14.8, 6.0),
-             'P5': (-17.5, -4.0, 5.5), 'P6': (17.5, -4.0, 5.5)}
+    # links staat de reuzenboom: daar geen spanner (de kroon zelf overdekt die kant)
+    palen = {'P2': (15.6, 7.0, 6.8), 'P3': (-9.5, -14.8, 6.0), 'P4': (9.5, -14.8, 6.0), 'P6': (17.5, -4.0, 5.5)}
     for x, y, h in palen.values():
         paal(g, x, y, h)
     P = {k: (v[0], v[1], v[2] - 0.1) for k, v in palen.items()}
@@ -771,7 +771,6 @@ def bouw_doeken(col):
     zeil(g, (FR[0], FR[1], TH + 0.25), (BL[0], BL[1], TH + 0.35), (BR[0] - 0.5, BR[1], TH + 2.0), 'gloed_doek_cyaan',
          n=14, zak=0.4, zaad=2.0)
     # boven de dansvloer: lange spanners langs de zijkanten en twee smalle vingers naar voren
-    zeil(g, (FL[0], FL[1] - 0.2, TH - 0.1), P['P1'], P['P5'], 'gloed_doek_uv', n=14, zak=0.6, zaad=3.0)
     zeil(g, (FR[0], FR[1] - 0.2, TH - 0.1), P['P2'], P['P6'], 'gloed_doek_uv', n=14, zak=0.6, zaad=4.0)
     zeil(g, (-5.5, TY0 - 0.2, TH - 0.1), (-2.2, TY0 - 0.2, TH - 0.1), P['P3'], 'gloed_doek_cyaan', n=18, zak=0.7, zaad=5.0)
     zeil(g, (2.2, TY0 - 0.2, TH - 0.1), (5.5, TY0 - 0.2, TH - 0.1), P['P4'], 'gloed_doek_magenta', n=18, zak=0.7, zaad=6.0)
@@ -828,7 +827,7 @@ def bouw_chill(col, ac):
     cx, cy = CHILL
     g = Geo()
     # laag tentdoek op palen
-    MID_H, RAND_H, R = 3.4, 2.05, 6.4
+    MID_H, RAND_H, R = 4.3, 2.3, 6.4
     npaal = 6
     a0 = 0.25
     for k in range(npaal):
@@ -848,7 +847,7 @@ def bouw_chill(col, ac):
         for j in range(na):
             a = 2 * math.pi * j / na
             rel = (a - a0) % (2 * math.pi / npaal) / (2 * math.pi / npaal)
-            zak_rand = 0.5 * math.sin(math.pi * rel) ** 1.5
+            zak_rand = 0.65 * math.sin(math.pi * rel) ** 1.2
             t = rr / R
             z = MID_H - (MID_H - RAND_H) * t ** 0.85 - zak_rand * t ** 3 - 0.15 * math.sin(math.pi * min(t, 1)) * math.sin(math.pi * rel)
             if t > 1:
@@ -1310,7 +1309,7 @@ def maak_wereld():
     # kleurverloop: nachtblauw boven, iets lichter (teal) aan de horizon
     ramp = nt.nodes.new('ShaderNodeValToRGB')
     ramp.color_ramp.elements[0].position = 0.0
-    ramp.color_ramp.elements[0].color = (0.010, 0.022, 0.035, 1)
+    ramp.color_ramp.elements[0].color = (0.035, 0.06, 0.085, 1)
     ramp.color_ramp.elements[1].position = 0.35
     ramp.color_ramp.elements[1].color = (0.0015, 0.002, 0.007, 1)
     nt.links.new(sep.outputs['Z'], ramp.inputs['Fac'])
@@ -1364,25 +1363,33 @@ def renderlicht(col):
 
     for naam, pos, d, kleur, extra in ankers:
         if naam.startswith('licht_spot'):
-            lamp('R_' + naam, 'SPOT', pos, d, kleur, 9000, hoek=9, straal=0.08)
+            # voor de foto: een waaier van stralen over het publiek (de viewer beweegt ze zelf)
+            i = int(naam.split('_')[-1]) - 1
+            if i < 8:
+                doel = Vector(((i - 3.5) * 6.0, -14.0, [0.5, 6, 2, 10, 10, 2, 6, 0.5][i]))
+            else:
+                doel = Vector((pos[0] * 4, 0.0, 30.0))
+            d = (doel - Vector(pos)).normalized()
+            lamp('R_' + naam, 'SPOT', pos, d, kleur, 50000, hoek=4.5, straal=0.05)
         elif naam.startswith('licht_blinder'):
-            lamp('R_' + naam, 'SPOT', pos, d, kleur, 6000, hoek=45, straal=0.3)
+            lamp('R_' + naam, 'SPOT', pos, d, kleur, 8000, hoek=40, straal=0.3)
         elif naam.startswith('licht_laser'):
             for k in range(5):
                 dd = (Matrix.Rotation(math.radians(-14 + 7 * k), 3, 'Z') @ d)
-                lamp(f'R_{naam}_{k}', 'SPOT', pos, dd, kleur, 3500, hoek=0.35, straal=0.002)
+                lamp(f'R_{naam}_{k}', 'SPOT', pos, dd, kleur, 200000, hoek=0.3, straal=0.002)
         elif naam.startswith('licht_boom'):
-            lamp('R_' + naam, 'SPOT', pos, d, kleur, 9000, hoek=55, straal=0.15)
+            lamp('R_' + naam, 'SPOT', pos, d, kleur, 150000, hoek=70, straal=0.15)
         elif naam == 'licht_vuur':
             lamp('R_' + naam, 'POINT', pos, d, kleur, 900, straal=0.4)
         elif naam.startswith('licht_muur'):
-            lamp('R_' + naam, 'SPOT', pos, d, kleur, 1800, hoek=70, straal=0.1)
+            lamp('R_' + naam, 'SPOT', pos, d, kleur, 6000, hoek=70, straal=0.1)
         elif naam.startswith('licht_warm'):
             lamp('R_' + naam, 'POINT', pos, d, kleur, 220, straal=0.3)
     # zacht maanlicht van achter het podium: randlicht op het bos
     zon = bpy.data.lights.new('R_maan', 'SUN')
-    zon.energy = 0.05
+    zon.energy = 0.45
     zon.color = (0.55, 0.65, 1.0)
+    zon.volume_factor = 0.0
     o = bpy.data.objects.new('R_maan', zon)
     o.rotation_euler = Vector((0.2, -1.0, -0.45)).to_track_quat('-Z', 'Y').to_euler()
     col.objects.link(o)
@@ -1404,13 +1411,13 @@ def renderlicht(col):
     out = nt.nodes['Material Output']
     vol = nt.nodes.new('ShaderNodeVolumePrincipled')
     vol.inputs['Color'].default_value = (0.8, 0.82, 0.9, 1)
-    vol.inputs['Anisotropy'].default_value = 0.45
+    vol.inputs['Anisotropy'].default_value = 0.7
     geo = nt.nodes.new('ShaderNodeNewGeometry')
     sep = nt.nodes.new('ShaderNodeSeparateXYZ')
     nt.links.new(geo.outputs['Position'], sep.inputs[0])
     ex = nt.nodes.new('ShaderNodeMath')
     ex.operation = 'MULTIPLY'
-    ex.inputs[1].default_value = -1 / 1.6
+    ex.inputs[1].default_value = -1 / 1.2
     nt.links.new(sep.outputs['Z'], ex.inputs[0])
     e = nt.nodes.new('ShaderNodeMath')
     e.operation = 'EXPONENT'
@@ -1424,8 +1431,8 @@ def renderlicht(col):
     nt.links.new(ns.outputs['Fac'], mm.inputs[1])
     sc_ = nt.nodes.new('ShaderNodeMath')
     sc_.operation = 'MULTIPLY_ADD'
-    sc_.inputs[1].default_value = 0.16
-    sc_.inputs[2].default_value = 0.008
+    sc_.inputs[1].default_value = 0.10
+    sc_.inputs[2].default_value = 0.0025
     nt.links.new(mm.outputs[0], sc_.inputs[0])
     nt.links.new(sc_.outputs[0], vol.inputs['Density'])
     nt.links.new(vol.outputs[0], out.inputs['Volume'])
@@ -1434,20 +1441,84 @@ def renderlicht(col):
     col.objects.link(o)
 
 
+def figuranten(col):
+    """Alleen voor de voorbeeldrenders: zet dansers uit ../figuren.glb (van bouw_figuren.py)
+    op de danserplaatsen, elk met een andere dans en een ander moment."""
+    pad = os.path.join(UIT, 'figuren.glb')
+    if not os.path.exists(pad):
+        print('  (geen figuren.glb: renders zonder dansers)')
+        return
+    voor = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=pad)
+    nieuw = [o for o in bpy.data.objects if o not in voor]
+    arm = next((o for o in nieuw if o.type == 'ARMATURE'), None)
+    lijf = next((o for o in nieuw if o.type == 'MESH' and o.parent == arm), None)
+    if arm is None or lijf is None:
+        return
+    for o in nieuw:
+        for c in list(o.users_collection):
+            c.objects.unlink(o)
+    dansen = [a for a in bpy.data.actions if a.name in ('house_1', 'house_2', 'house_3', 'wiegen')]
+    r = random.Random(4)
+    for k, (x, y, h, zone, z) in enumerate(dansers):
+        a = arm.copy()
+        col.objects.link(a)
+        a.location = (x, y, z)
+        a.rotation_euler = (0, 0, h + math.pi)
+        s = r.uniform(0.93, 1.07)
+        a.scale = (s, s, s)
+        ad = a.animation_data
+        for t in list(ad.nla_tracks):
+            ad.nla_tracks.remove(t)
+        act = dansen[r.randrange(3)] if zone in ('vloer', 'podium', 'rand') else dansen[-1]
+        if zone == 'podium' and k == 0:
+            act = dansen[-1]
+        ad.action = act
+        try:
+            ad.action_slot = act.slots[0]
+        except (AttributeError, IndexError):
+            pass
+        ad.action = None
+        tr = ad.nla_tracks.new()
+        st = tr.strips.new(act.name, int(1 - r.uniform(0, act.frame_range[1] - 30)), act)
+        try:
+            st.action_slot = act.slots[0]
+        except (AttributeError, IndexError):
+            pass
+        m = lijf.copy()
+        m.parent = a
+        for mod in m.modifiers:
+            if mod.type == 'ARMATURE':
+                mod.object = a
+        col.objects.link(m)
+    for o in nieuw:
+        bpy.data.objects.remove(o)
+    print(f'  {len(dansers)} figuranten geplaatst')
+
+
 def richt(obj, positie, doel):
     obj.location = positie
     d = Vector(doel) - Vector(positie)
     obj.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
 
 
-RENDER_GLOED = {'led': 6.0, 'doek': 2.2, 'scherm': 3.0, 'stringart': 9.0, 'paddenstoel': 5.0,
+RENDER_GLOED = {'led': 6.0, 'doek': 1.0, 'scherm': 3.0, 'stringart': 9.0, 'paddenstoel': 5.0,
                 'lampion': 8.0, 'vuur': 10.0, 'podium': 25.0}
 
 
-def render(alleen=(), snel=False):
+def render(alleen=(), snel=False, mist=True):
     sc = bpy.context.scene
     col = collectie('Alleen_render')
     renderlicht(col)
+    if not mist:
+        bpy.data.objects.remove(bpy.data.objects['R_mist'])
+    figuranten(col)
+    sc.frame_set(1)
+    uitmap = HIER
+    if os.environ.get('RAVE_DAG'):          # controlebeeld bij daglicht (alleen voor ontwikkeling)
+        uitmap = os.environ['RAVE_DAG']
+        bpy.data.objects['R_maan'].data.energy = 3.0
+        sc.world.node_tree.nodes['Background'].inputs['Strength'].default_value = 25.0
     for m in bpy.data.materials:
         if m.name.startswith('gloed_'):
             groep = m.name.split('_')[1]
@@ -1472,15 +1543,16 @@ def render(alleen=(), snel=False):
     except TypeError:
         pass
     sc.view_settings.exposure = 0.0
-    beelden = [('totaal', (0, -30, 1.7), (0, 20, 4.2), 22),
-               ('boom', (-1.5, -11, 1.8), (-19, 6, 7.5), 22),
-               ('chill', (-20.5, -29.0, 1.65), (22, -6, 1.5), 26)]
+    beelden = [('totaal', (0, -30, 1.7), (0, 20, 5.0), 30),
+               ('boom', (-4.0, -13.0, 1.7), (-19, 6, 7.0), 24),
+               ('chill', (13.5, -12.5, 1.6), (24.5, -5.5, 1.3), 28),
+               ('vuur', (-20.0, -28.5, 1.5), (-12.5, -20.5, 0.9), 30)]
     for naam, pos, doel, lens in beelden:
         if alleen and naam not in alleen:
             continue
         cam_d.lens = lens
         richt(cam, pos, doel)
-        sc.render.filepath = os.path.join(HIER, f'voorbeeld-{naam}.png')
+        sc.render.filepath = os.path.join(uitmap, f'voorbeeld-{naam}.png')
         bpy.ops.render.render(write_still=True)
         print('Gerenderd:', sc.render.filepath)
 
@@ -1567,7 +1639,7 @@ def main():
           f'rave.glb {os.path.getsize(os.path.join(UIT, "rave.glb")) / 1e6:.2f} MB')
 
     if doe_render:
-        render(alleen, snel)
+        render(alleen, snel, '--zondermist' not in argv)
 
 
 if __name__ == '__main__':
