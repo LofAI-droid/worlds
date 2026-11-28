@@ -12,6 +12,7 @@ import { maakHoogteMist, maakLucht, NACHT, MAAN_RICHTING } from './lucht.js';
 import { Lichtshow } from './licht.js';
 import { ritme, stapRitme, tik, dropNu, startMicrofoon, stopMicrofoon, microfoonAan } from './ritme.js';
 import { FigurenBron, Dansers } from './dansers.js';
+import { Pad, KNOP } from './pad.js';
 
 const DRACO = 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/';
 const WANDEL = 2.0;          // m/s
@@ -29,7 +30,7 @@ const el = {
   doek: $('doek'), intro: $('intro'), wandel: $('wandel'), voortgang: $('voortgang'),
   pauze: $('pauze'), kaart: $('kaart'), stok: $('stok'), vizier: $('vizier'), zicht: $('zicht'),
   hud: $('hud'), lamp: $('ritmeLamp'), lampTekst: $('ritmeTekst'), tikKnop: $('tikKnop'), dansKnop: $('dansKnop'),
-  muziek: $('muziek'), muziekKop: $('muziekKop'), muziekKnop: $('muziekKnop'), spotify: $('spotify'),
+  melding: $('melding'), muziek: $('muziek'), muziekKop: $('muziekKop'), muziekKnop: $('muziekKnop'), spotify: $('spotify'),
   micKnop: $('micKnop'), kwaliteitKnop: $('kwaliteitKnop')
 };
 const params = new URLSearchParams(location.search);
@@ -550,6 +551,60 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && bezig && (vrijeMuis || document.pointerLockElement !== el.doek)) pauzeer();
 });
 
+// ---------- invoer: controller (Nacon of andere Xbox-achtige pad) ----------
+const pad = new Pad();
+let padRennen = false;
+let padFase = ritme.fase;
+let meldingKlok = null;
+function melding(tekst) {
+  el.melding.textContent = tekst;
+  el.melding.hidden = false;
+  clearTimeout(meldingKlok);
+  meldingKlok = setTimeout(() => { el.melding.hidden = true; }, 3200);
+}
+function korteNaam(id) {
+  return id.replace(/\s*\(.*$/, '').trim() || 'controller';
+}
+pad.onVerbonden = (naam) => {
+  document.documentElement.classList.add('heeft-pad');
+  melding(`Controller verbonden: ${korteNaam(naam)}`);
+};
+pad.onVerbroken = () => {
+  document.documentElement.classList.remove('heeft-pad');
+  melding('Controller losgekoppeld');
+};
+const PAD_KIJK = 2.6;        // rad/s bij volle uitslag
+function padInvoer(dt) {
+  pad.lees();
+  if (!pad.actief) return;
+  if (!bezig) {
+    if (data && (pad.druk(KNOP.START) || pad.druk(KNOP.A))) {
+      vrijeMuis = true;        // muisvergrendeling kan niet vanuit een controllerknop
+      start();
+    }
+    return;
+  }
+  if (pad.druk(KNOP.START)) { pauzeer(); return; }
+  if (pad.rechts.d > 0) draai(pad.rechts.x * PAD_KIJK * dt, pad.rechts.y * PAD_KIJK * 0.7 * dt, 1);
+  if (pad.druk(KNOP.A)) spring();
+  if (pad.druk(KNOP.B)) wisselDans();
+  if (pad.druk(KNOP.X)) salto();
+  if (pad.druk(KNOP.Y)) wisselZicht();
+  if (pad.druk(KNOP.LB)) doeTik();
+  if (pad.druk(KNOP.RB)) dropNu();
+  if (pad.druk(KNOP.L3)) padRennen = !padRennen;
+  if (pad.druk(KNOP.OP)) { kaartAan = !kaartAan; el.kaart.hidden = !kaartAan; }
+  if (pad.druk(KNOP.SELECT)) zetMuziek(el.muziek.classList.contains('dicht'));
+  if (!cam.ik) {
+    const z = (pad.houd(KNOP.RECHTS) ? 1 : 0) - (pad.houd(KNOP.LINKS) ? 1 : 0);
+    if (z) cam.afstand = Math.max(1.8, Math.min(14, cam.afstand * Math.exp(z * 1.4 * dt)));
+  }
+  if (pad.links.d === 0) padRennen = false;
+  // korte trilling als de drop valt
+  if (ritme.fase === 'drop' && padFase !== 'drop') pad.tril(320, 0.6, 1);
+  padFase = ritme.fase;
+}
+
 // ---------- statuslampje ----------
 let lampKlok = 0;
 function toonLamp(meteen, bpm) {
@@ -645,6 +700,12 @@ function stap(dt) {
     if (toets.has('l')) opzij -= 1;
   }
   let snel = toets.has('loop') ? LOOP : WANDEL;
+  if (bezig && pad.links.d > 0) {
+    // controller: de uitslag van de stick bepaalt de snelheid (lengte tot 1)
+    vooruit = -pad.links.y;
+    opzij = pad.links.x;
+    if (pad.rt > 0.4 || padRennen) snel = LOOP;
+  }
   if (bezig && stok.id !== null) {
     const d = Math.hypot(stok.dx, stok.dy);
     if (d > 8) {
@@ -753,6 +814,7 @@ function lus() {
   const dt = Math.min(klok.getDelta(), 0.05);
   if (data) {
     tijd += dt;
+    padInvoer(dt);
     if (!bezig && !minderBeweging && !vasteBlik) cam.yaw += dt * 0.04;
     stapRitme(dt);
     stap(dt);

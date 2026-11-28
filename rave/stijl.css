@@ -89,6 +89,25 @@ kbd, .duim {
 .aanraak { display: none; }
 .is-aanraak .toetsen { display: none; }
 .is-aanraak .aanraak { display: grid; }
+.pad { display: none; }
+.heeft-pad .pad { display: grid; }
+.heeft-pad .toetsen, .heeft-pad .aanraak { display: none; }
+
+.melding {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(10, 8, 20, 0.78);
+  border: 1px solid rgba(241, 238, 248, 0.18);
+  color: var(--tekst);
+  font-size: 0.88rem;
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+}
 
 .knop {
   appearance: none;
